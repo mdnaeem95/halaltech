@@ -1,3 +1,5 @@
+"use client"
+
 import React, { useState } from 'react';
 import { Menu, X, Code, Smartphone, Monitor, Palette, ChevronRight, Star, Phone, Mail, MapPin, Check, ArrowRight } from 'lucide-react';
 
