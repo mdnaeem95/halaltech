@@ -1,61 +1,66 @@
-"use client"
+/* eslint-disable  @typescript-eslint/no-explicit-any */
+'use client'
 
-import React, { useState } from 'react';
-import { Menu, X, Code, Smartphone, Monitor, Palette, ChevronRight, Star, Phone, Mail, MapPin, Check, ArrowRight } from 'lucide-react';
+import React, { useState, useEffect } from 'react'
+import { Menu, X, Code, Smartphone, Monitor, Palette, ChevronRight, Star, Phone, Mail, MapPin, Check, ArrowRight, Loader2 } from 'lucide-react'
+import { createClient } from '@/lib/supabase/client'
+import { User } from '@supabase/supabase-js'
+import AuthModal from './auth/AuthModal'
+import UserMenu from './auth/UserMenu'
+import toast, { Toaster } from 'react-hot-toast'
+import Link from 'next/link'
 
-const App = () => {
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [selectedCategory, setSelectedCategory] = useState('all');
+const TechHalalApp = () => {
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [selectedCategory, setSelectedCategory] = useState('all')
+  const [services, setServices] = useState<any[]>([])
+  const [loadingServices, setLoadingServices] = useState(true)
+  const [authModalOpen, setAuthModalOpen] = useState(false)
+  const [user, setUser] = useState<User | null>(null)
   const [contactForm, setContactForm] = useState({
     name: '',
     email: '',
     company: '',
+    phone: '',
     service: '',
     message: ''
-  });
+  })
+  const [submittingContact, setSubmittingContact] = useState(false)
 
-  const services = [
-    {
-      id: 1,
-      title: 'Web Development',
-      category: 'web',
-      icon: <Monitor className="w-8 h-8" />,
-      description: 'Custom web applications built with modern technologies',
-      features: ['React/Next.js', 'Responsive Design', 'SEO Optimized', 'Fast Performance'],
-      price: 'From $2,500',
-      rating: 4.9
-    },
-    {
-      id: 2,
-      title: 'Mobile App Development',
-      category: 'mobile',
-      icon: <Smartphone className="w-8 h-8" />,
-      description: 'Native and cross-platform mobile applications',
-      features: ['iOS & Android', 'React Native', 'Flutter', 'App Store Deployment'],
-      price: 'From $5,000',
-      rating: 4.8
-    },
-    {
-      id: 3,
-      title: 'UI/UX Design',
-      category: 'design',
-      icon: <Palette className="w-8 h-8" />,
-      description: 'Beautiful, user-friendly designs for web and mobile',
-      features: ['User Research', 'Wireframing', 'Prototyping', 'Design Systems'],
-      price: 'From $1,500',
-      rating: 5.0
-    },
-    {
-      id: 4,
-      title: 'Web App Development',
-      category: 'web',
-      icon: <Code className="w-8 h-8" />,
-      description: 'Complex web applications with advanced functionality',
-      features: ['API Integration', 'Database Design', 'Cloud Deployment', 'Scalable Architecture'],
-      price: 'From $8,000',
-      rating: 4.9
+  const supabase = createClient()
+
+  useEffect(() => {
+    // Check auth status
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      setUser(user)
+    })
+
+    // Listen for auth changes
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event: any, session: any) => {
+      setUser(session?.user ?? null)
+    })
+
+    // Fetch services
+    fetchServices()
+
+    return () => subscription.unsubscribe()
+  }, [])
+
+  const fetchServices = async () => {
+    try {
+      const res = await fetch('/api/services')
+      const data = await res.json()
+      if (data.success) {
+        setServices(data.data)
+      }
+    } catch (error) {
+      console.error('Failed to fetch services:', error)
+    } finally {
+      setLoadingServices(false)
     }
-  ];
+  }
 
   const testimonials = [
     {
@@ -76,43 +81,81 @@ const App = () => {
       text: "Great communication throughout the project. Our learning platform is now serving thousands.",
       rating: 5
     }
-  ];
+  ]
 
   const categories = [
     { value: 'all', label: 'All Services' },
     { value: 'web', label: 'Web Development' },
     { value: 'mobile', label: 'Mobile Apps' },
     { value: 'design', label: 'Design' }
-  ];
+  ]
 
   const filteredServices = selectedCategory === 'all' 
     ? services 
-    : services.filter(service => service.category === selectedCategory);
+    : services.filter(service => service.category === selectedCategory)
 
-  const handleContactSubmit = () => {
-    // In a real app, this would send to an API
-    if (contactForm.name && contactForm.email) {
-      alert('Thank you for your inquiry! We will contact you within 24 hours.');
-      setContactForm({
-        name: '',
-        email: '',
-        company: '',
-        service: '',
-        message: ''
-      });
-    } else {
-      alert('Please fill in at least your name and email.');
+  const handleContactSubmit = async () => {
+    if (!contactForm.name || !contactForm.email || !contactForm.message) {
+      toast.error('Please fill in all required fields')
+      return
     }
-  };
+
+    setSubmittingContact(true)
+    try {
+      const res = await fetch('/api/contact', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(contactForm),
+      })
+
+      const data = await res.json()
+      
+      if (data.success) {
+        toast.success(data.message)
+        setContactForm({
+          name: '',
+          email: '',
+          company: '',
+          phone: '',
+          service: '',
+          message: ''
+        })
+      } else {
+        toast.error(data.error || 'Failed to submit form')
+      }
+    } catch (error) {
+      toast.error('Failed to submit form')
+      console.log('Failed to submit form: ', error)
+    } finally {
+      setSubmittingContact(false)
+    }
+  }
+
+  const getServiceIcon = (category: string) => {
+    switch (category) {
+      case 'web':
+        return <Monitor className="w-8 h-8" />
+      case 'mobile':
+        return <Smartphone className="w-8 h-8" />
+      case 'design':
+        return <Palette className="w-8 h-8" />
+      default:
+        return <Code className="w-8 h-8" />
+    }
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
+      <Toaster position="top-right" />
+      
       {/* Navigation */}
       <nav className="bg-white shadow-sm sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center">
-              <h1 className="text-2xl font-bold text-emerald-600">TechHalal</h1>
+              <Link href="/" className="text-2xl font-bold text-emerald-600">
+                TechHalal
+              </Link>
             </div>
             
             <div className="hidden md:flex items-center space-x-8">
@@ -120,9 +163,25 @@ const App = () => {
               <a href="#about" className="text-gray-700 hover:text-emerald-600 transition">About</a>
               <a href="#testimonials" className="text-gray-700 hover:text-emerald-600 transition">Testimonials</a>
               <a href="#contact" className="text-gray-700 hover:text-emerald-600 transition">Contact</a>
-              <button className="bg-emerald-600 text-white px-4 py-2 rounded-lg hover:bg-emerald-700 transition">
-                Get Started
-              </button>
+              
+              {user ? (
+                <>
+                  <Link
+                    href="/dashboard"
+                    className="text-gray-700 hover:text-emerald-600 transition"
+                  >
+                    Dashboard
+                  </Link>
+                  <UserMenu />
+                </>
+              ) : (
+                <button
+                  onClick={() => setAuthModalOpen(true)}
+                  className="bg-emerald-600 text-white px-4 py-2 rounded-lg hover:bg-emerald-700 transition"
+                >
+                  Get Started
+                </button>
+              )}
             </div>
 
             <button 
@@ -142,9 +201,21 @@ const App = () => {
               <a href="#about" className="block px-3 py-2 text-gray-700 hover:bg-gray-100 rounded">About</a>
               <a href="#testimonials" className="block px-3 py-2 text-gray-700 hover:bg-gray-100 rounded">Testimonials</a>
               <a href="#contact" className="block px-3 py-2 text-gray-700 hover:bg-gray-100 rounded">Contact</a>
-              <button className="w-full text-left bg-emerald-600 text-white px-3 py-2 rounded">
-                Get Started
-              </button>
+              {user ? (
+                <Link
+                  href="/dashboard"
+                  className="block px-3 py-2 text-gray-700 hover:bg-gray-100 rounded"
+                >
+                  Dashboard
+                </Link>
+              ) : (
+                <button
+                  onClick={() => setAuthModalOpen(true)}
+                  className="w-full text-left bg-emerald-600 text-white px-3 py-2 rounded"
+                >
+                  Get Started
+                </button>
+              )}
             </div>
           </div>
         )}
@@ -162,12 +233,18 @@ const App = () => {
               Build your digital presence with partners who understand your values.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <button className="bg-emerald-600 text-white px-8 py-3 rounded-lg hover:bg-emerald-700 transition flex items-center justify-center">
-                View Our Services <ChevronRight className="ml-2" />
+              <button
+                onClick={() => setAuthModalOpen(true)}
+                className="bg-emerald-600 text-white px-8 py-3 rounded-lg hover:bg-emerald-700 transition flex items-center justify-center"
+              >
+                Start Your Project <ChevronRight className="ml-2" />
               </button>
-              <button className="bg-white text-emerald-600 border-2 border-emerald-600 px-8 py-3 rounded-lg hover:bg-emerald-50 transition">
-                Schedule Consultation
-              </button>
+              <a
+                href="#services"
+                className="bg-white text-emerald-600 border-2 border-emerald-600 px-8 py-3 rounded-lg hover:bg-emerald-50 transition"
+              >
+                View Our Services
+              </a>
             </div>
           </div>
         </div>
@@ -199,40 +276,57 @@ const App = () => {
           </div>
 
           {/* Service Cards */}
-          <div className="grid md:grid-cols-2 lg:grid-cols-2 gap-6">
-            {filteredServices.map(service => (
-              <div key={service.id} className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition">
-                <div className="flex items-start justify-between mb-4">
-                  <div className="p-3 bg-emerald-100 rounded-lg text-emerald-600">
-                    {service.icon}
+          {loadingServices ? (
+            <div className="flex justify-center">
+              <Loader2 className="w-8 h-8 animate-spin text-emerald-600" />
+            </div>
+          ) : (
+            <div className="grid md:grid-cols-2 lg:grid-cols-2 gap-6">
+              {filteredServices.map(service => (
+                <div key={service.id} className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition">
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="p-3 bg-emerald-100 rounded-lg text-emerald-600">
+                      {getServiceIcon(service.category)}
+                    </div>
+                    <div className="flex items-center">
+                      <Star className="w-5 h-5 text-yellow-400 fill-current" />
+                      <span className="ml-1 text-gray-600">4.9</span>
+                    </div>
                   </div>
-                  <div className="flex items-center">
-                    <Star className="w-5 h-5 text-yellow-400 fill-current" />
-                    <span className="ml-1 text-gray-600">{service.rating}</span>
+                  
+                  <h4 className="text-xl font-semibold text-gray-900 mb-2">{service.title}</h4>
+                  <p className="text-gray-600 mb-4">{service.description}</p>
+                  
+                  <ul className="space-y-2 mb-4">
+                    {service.features?.slice(0, 4).map((feature: string, idx: number) => (
+                      <li key={idx} className="flex items-center text-sm text-gray-600">
+                        <Check className="w-4 h-4 text-emerald-600 mr-2" />
+                        {feature}
+                      </li>
+                    ))}
+                  </ul>
+                  
+                  <div className="flex items-center justify-between pt-4 border-t">
+                    <span className="text-lg font-semibold text-gray-900">
+                      From ${service.base_price?.toLocaleString() || '2,500'}
+                    </span>
+                    <button
+                      onClick={() => {
+                        if (user) {
+                          window.location.href = '/dashboard/projects/new'
+                        } else {
+                          setAuthModalOpen(true)
+                        }
+                      }}
+                      className="text-emerald-600 hover:text-emerald-700 font-medium flex items-center"
+                    >
+                      Get Started <ArrowRight className="w-4 h-4 ml-1" />
+                    </button>
                   </div>
                 </div>
-                
-                <h4 className="text-xl font-semibold text-gray-900 mb-2">{service.title}</h4>
-                <p className="text-gray-600 mb-4">{service.description}</p>
-                
-                <ul className="space-y-2 mb-4">
-                  {service.features.map((feature, idx) => (
-                    <li key={idx} className="flex items-center text-sm text-gray-600">
-                      <Check className="w-4 h-4 text-emerald-600 mr-2" />
-                      {feature}
-                    </li>
-                  ))}
-                </ul>
-                
-                <div className="flex items-center justify-between pt-4 border-t">
-                  <span className="text-lg font-semibold text-gray-900">{service.price}</span>
-                  <button className="text-emerald-600 hover:text-emerald-700 font-medium flex items-center">
-                    Learn More <ArrowRight className="w-4 h-4 ml-1" />
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
       </section>
 
@@ -361,22 +455,24 @@ const App = () => {
             <div className="bg-gray-50 rounded-xl p-8">
               <div className="space-y-4">
                 <div>
-                  <label className="block text-gray-700 font-medium mb-2">Name</label>
+                  <label className="block text-gray-700 font-medium mb-2">Name *</label>
                   <input
                     type="text"
                     value={contactForm.name}
                     onChange={(e) => setContactForm({...contactForm, name: e.target.value})}
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                    placeholder="Your name"
                   />
                 </div>
                 
                 <div>
-                  <label className="block text-gray-700 font-medium mb-2">Email</label>
+                  <label className="block text-gray-700 font-medium mb-2">Email *</label>
                   <input
                     type="email"
                     value={contactForm.email}
                     onChange={(e) => setContactForm({...contactForm, email: e.target.value})}
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                    placeholder="you@example.com"
                   />
                 </div>
                 
@@ -387,6 +483,18 @@ const App = () => {
                     value={contactForm.company}
                     onChange={(e) => setContactForm({...contactForm, company: e.target.value})}
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                    placeholder="Your company name"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-gray-700 font-medium mb-2">Phone</label>
+                  <input
+                    type="tel"
+                    value={contactForm.phone}
+                    onChange={(e) => setContactForm({...contactForm, phone: e.target.value})}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                    placeholder="+65 8123 4567"
                   />
                 </div>
                 
@@ -405,20 +513,26 @@ const App = () => {
                 </div>
                 
                 <div>
-                  <label className="block text-gray-700 font-medium mb-2">Message</label>
+                  <label className="block text-gray-700 font-medium mb-2">Message *</label>
                   <textarea
                     rows={4}
                     value={contactForm.message}
                     onChange={(e) => setContactForm({...contactForm, message: e.target.value})}
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                    placeholder="Tell us about your project..."
                   />
                 </div>
                 
                 <button
                   onClick={handleContactSubmit}
-                  className="w-full bg-emerald-600 text-white py-3 rounded-lg hover:bg-emerald-700 transition font-medium"
+                  disabled={submittingContact}
+                  className="w-full bg-emerald-600 text-white py-3 rounded-lg hover:bg-emerald-700 transition font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
                 >
-                  Send Message
+                  {submittingContact ? (
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                  ) : (
+                    'Send Message'
+                  )}
                 </button>
               </div>
             </div>
@@ -476,8 +590,14 @@ const App = () => {
           </div>
         </div>
       </footer>
-    </div>
-  );
-};
 
-export default App;
+      {/* Auth Modal */}
+      <AuthModal
+        isOpen={authModalOpen}
+        onClose={() => setAuthModalOpen(false)}
+      />
+    </div>
+  )
+}
+
+export default TechHalalApp
