@@ -8,9 +8,10 @@ import AuthModal from './auth/AuthModal'
 import UserMenu from './auth/UserMenu'
 import toast, { Toaster } from 'react-hot-toast'
 import Link from 'next/link'
-import { supabase } from '@/lib/supabase/client'
+import { createClient } from '@/lib/supabase/client'
 
 const TechHalalApp = () => {
+  const supabase = createClient()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [selectedCategory, setSelectedCategory] = useState('all')
   const [services, setServices] = useState<any[]>([])

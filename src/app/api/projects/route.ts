@@ -1,6 +1,6 @@
 /* eslint-disable  @typescript-eslint/no-explicit-any */
 import { NextResponse } from 'next/server'
-import { createServerSupabaseClient } from '@/lib/supabase/server'
+import { createClient } from '@/lib/supabase/server' // Changed import
 import { z } from 'zod'
 
 const createProjectSchema = z.object({
@@ -13,7 +13,7 @@ const createProjectSchema = z.object({
 
 export async function GET() {
   try {
-    const supabase = await createServerSupabaseClient()
+    const supabase = await createClient() // Changed
     
     // Get authenticated user
     const { data: { user }, error: userError } = await supabase.auth.getUser()
@@ -73,7 +73,7 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
-    const supabase = await createServerSupabaseClient()
+    const supabase = await createClient() // Changed
     
     // Get authenticated user
     const { data: { user }, error: userError } = await supabase.auth.getUser()
@@ -99,9 +99,6 @@ export async function POST(request: Request) {
       .single()
 
     if (error) throw error
-
-    // TODO: Send notification to admin
-    // TODO: Send confirmation email to user
 
     return NextResponse.json({ 
       success: true, 

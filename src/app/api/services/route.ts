@@ -1,13 +1,13 @@
 /* eslint-disable  @typescript-eslint/no-explicit-any */
 import { NextResponse } from 'next/server'
-import { createServerSupabaseClient } from '@/lib/supabase/server'
+import { createClient } from '@/lib/supabase/server' // Changed import
 
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url)
     const category = searchParams.get('category')
 
-    const supabase = await createServerSupabaseClient()
+    const supabase = await createClient() // Changed from createServerSupabaseClient()
 
     let query = supabase
       .from('services')

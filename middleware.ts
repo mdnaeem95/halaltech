@@ -1,6 +1,6 @@
-// middleware.ts
+// middleware.ts (in your project root)
 import { type NextRequest } from 'next/server'
-import { updateSession } from '@/lib/supabase/middleware'
+import { updateSession } from '@/utils/supabase/middleware' // <-- Make sure this path is correct
 
 export async function middleware(request: NextRequest) {
   return await updateSession(request)

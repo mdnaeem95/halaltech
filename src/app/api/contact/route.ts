@@ -1,6 +1,6 @@
 /* eslint-disable  @typescript-eslint/no-explicit-any */
 import { NextResponse } from 'next/server'
-import { createServerSupabaseClient } from '@/lib/supabase/server'
+import { createClient } from '@/lib/supabase/server' // Changed import
 import { z } from 'zod'
 
 const contactSchema = z.object({
@@ -17,7 +17,7 @@ export async function POST(request: Request) {
     const body = await request.json()
     const validatedData = contactSchema.parse(body)
 
-    const supabase = await createServerSupabaseClient()
+    const supabase = await createClient() // Changed from createServerSupabaseClient()
 
     // Save to database
     const { data, error } = await supabase
@@ -34,9 +34,6 @@ export async function POST(request: Request) {
       .single()
 
     if (error) throw error
-
-    // TODO: Send email notification to admin
-    // TODO: Send confirmation email to user
 
     return NextResponse.json({ 
       success: true, 

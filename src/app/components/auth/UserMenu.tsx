@@ -7,12 +7,13 @@ import { LogOut, User as UserIcon, Settings, FileText } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import toast from 'react-hot-toast'
-import { supabase } from '@/lib/supabase/client'
+import { createClient } from '@/lib/supabase/client'
 
 export default function UserMenu() {
   const [user, setUser] = useState<User | null>(null)
   const [isOpen, setIsOpen] = useState(false)
   const router = useRouter()
+  const supabase = createClient()
 
   useEffect(() => {
     // Get initial user
