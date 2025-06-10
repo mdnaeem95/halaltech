@@ -1,11 +1,11 @@
 /* eslint-disable  @typescript-eslint/no-explicit-any */
-import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import DashboardStats from './components/DashboardStats'
 import RecentProjects from './components/RecentProjects'
+import { createClient } from '@/lib/supabase/client'
 
 export default async function DashboardPage() {
-  const supabase = await createServerSupabaseClient()
+  const supabase = createClient()
   
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
