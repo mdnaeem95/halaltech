@@ -3,12 +3,12 @@
 
 import React, { useState, useEffect } from 'react'
 import { Menu, X, Code, Smartphone, Monitor, Palette, ChevronRight, Star, Phone, Mail, MapPin, Check, ArrowRight, Loader2 } from 'lucide-react'
-import { createClient } from '@/lib/supabase/client'
 import { User } from '@supabase/supabase-js'
 import AuthModal from './auth/AuthModal'
 import UserMenu from './auth/UserMenu'
 import toast, { Toaster } from 'react-hot-toast'
 import Link from 'next/link'
+import { supabase } from '@/lib/supabase/client'
 
 const TechHalalApp = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
@@ -26,8 +26,6 @@ const TechHalalApp = () => {
     message: ''
   })
   const [submittingContact, setSubmittingContact] = useState(false)
-
-  const supabase = createClient()
 
   useEffect(() => {
     // Check auth status

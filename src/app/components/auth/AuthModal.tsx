@@ -2,12 +2,12 @@
 'use client'
 
 import { useState } from 'react'
-import { createClient } from '@/lib/supabase/client'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { X, Loader2 } from 'lucide-react'
 import toast from 'react-hot-toast'
+import { supabase } from '@/lib/supabase/client'
 
 const loginSchema = z.object({
   email: z.string().email('Invalid email address'),
@@ -32,7 +32,6 @@ interface AuthModalProps {
 export default function AuthModal({ isOpen, onClose, defaultMode = 'login' }: AuthModalProps) {
   const [mode, setMode] = useState<'login' | 'signup'>(defaultMode)
   const [isLoading, setIsLoading] = useState(false)
-  const supabase = createClient()
 
   const loginForm = useForm<LoginForm>({
     resolver: zodResolver(loginSchema),

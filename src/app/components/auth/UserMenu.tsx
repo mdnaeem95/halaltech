@@ -2,17 +2,16 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { createClient } from '@/lib/supabase/client'
 import { User } from '@supabase/supabase-js'
 import { LogOut, User as UserIcon, Settings, FileText } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import toast from 'react-hot-toast'
+import { supabase } from '@/lib/supabase/client'
 
 export default function UserMenu() {
   const [user, setUser] = useState<User | null>(null)
   const [isOpen, setIsOpen] = useState(false)
-  const supabase = createClient()
   const router = useRouter()
 
   useEffect(() => {
