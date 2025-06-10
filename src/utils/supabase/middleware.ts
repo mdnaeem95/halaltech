@@ -29,13 +29,15 @@ export async function updateSession(request: NextRequest) {
   )
 
   // IMPORTANT: DO NOT REMOVE auth.getUser()
+  // This refreshes the session if needed
   const {
     data: { user },
+    error
   } = await supabase.auth.getUser()
 
   // Define protected routes that require authentication
-  const protectedRoutes = ['/dashboard', '/api/projects', '/api/invoices']
-  const authRoutes = ['/login', '/signup', '/auth']
+  const protectedRoutes = ['/dashboard']
+  const authRoutes = ['/login', '/signup']
   
   const isProtectedRoute = protectedRoutes.some(route => 
     request.nextUrl.pathname.startsWith(route)
@@ -45,17 +47,37 @@ export async function updateSession(request: NextRequest) {
     request.nextUrl.pathname.startsWith(route)
   )
 
+  // Skip redirect for API routes - let them handle auth themselves
+  if (request.nextUrl.pathname.startsWith('/api/')) {
+    return supabaseResponse
+  }
+
+  // Debug: Log auth state (remove in production)
+  if (process.env.NODE_ENV === 'development') {
+    console.log('Middleware auth check:', {
+      pathname: request.nextUrl.pathname,
+      hasUser: !!user,
+      userEmail: user?.email,
+      isProtectedRoute,
+      isAuthRoute,
+      error: error?.message
+    })
+  }
+
   // Redirect to login if accessing protected route without authentication
   if (!user && isProtectedRoute) {
     const url = request.nextUrl.clone()
     url.pathname = '/login'
+    url.searchParams.set('redirectTo', request.nextUrl.pathname)
     return NextResponse.redirect(url)
   }
 
   // Redirect to dashboard if accessing auth routes while authenticated
   if (user && isAuthRoute) {
+    const redirectTo = request.nextUrl.searchParams.get('redirectTo')
     const url = request.nextUrl.clone()
-    url.pathname = '/dashboard'
+    url.pathname = redirectTo || '/dashboard'
+    url.search = ''
     return NextResponse.redirect(url)
   }
 

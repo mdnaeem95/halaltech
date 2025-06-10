@@ -8,29 +8,41 @@ interface DashboardStatsProps {
   role: string
 }
 
+// Helper function to safely format numbers
+const safeToLocaleString = (value: any): string => {
+  const num = Number(value) || 0
+  return num.toLocaleString()
+}
+
+// Helper function to safely format currency
+const safeCurrencyFormat = (value: any): string => {
+  const num = Number(value) || 0
+  return `$${num.toLocaleString()}`
+}
+
 export default function DashboardStats({ stats, role }: DashboardStatsProps) {
   const adminCards = [
     {
       title: 'Total Projects',
-      value: stats.totalProjects,
+      value: safeToLocaleString(stats?.totalProjects),
       icon: FileText,
       color: 'bg-blue-500',
     },
     {
       title: 'Total Clients',
-      value: stats.totalClients,
+      value: safeToLocaleString(stats?.totalClients),
       icon: Users,
       color: 'bg-emerald-500',
     },
     {
       title: 'Pending Inquiries',
-      value: stats.pendingInquiries,
+      value: safeToLocaleString(stats?.pendingInquiries),
       icon: Clock,
       color: 'bg-yellow-500',
     },
     {
       title: 'Total Revenue',
-      value: `$${stats.totalRevenue.toLocaleString()}`,
+      value: safeCurrencyFormat(stats?.totalRevenue),
       icon: DollarSign,
       color: 'bg-purple-500',
     },
@@ -39,25 +51,25 @@ export default function DashboardStats({ stats, role }: DashboardStatsProps) {
   const clientCards = [
     {
       title: 'Total Projects',
-      value: stats.totalProjects,
+      value: safeToLocaleString(stats?.totalProjects),
       icon: FileText,
       color: 'bg-blue-500',
     },
     {
       title: 'Active Projects',
-      value: stats.activeProjects,
+      value: safeToLocaleString(stats?.activeProjects),
       icon: Clock,
       color: 'bg-emerald-500',
     },
     {
       title: 'Total Spent',
-      value: `$${stats.totalSpent.toLocaleString()}`,
+      value: safeCurrencyFormat(stats?.totalSpent),
       icon: DollarSign,
       color: 'bg-purple-500',
     },
     {
       title: 'Pending Invoices',
-      value: stats.pendingInvoices,
+      value: safeToLocaleString(stats?.pendingInvoices),
       icon: DollarSign,
       color: 'bg-yellow-500',
     },

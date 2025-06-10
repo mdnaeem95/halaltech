@@ -8,6 +8,7 @@ import { z } from 'zod'
 import { X, Loader2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client' 
 import toast from 'react-hot-toast'
+import { useRouter, useSearchParams } from 'next/navigation'
 
 const loginSchema = z.object({
   email: z.string().email('Invalid email address'),
@@ -32,6 +33,8 @@ interface AuthModalProps {
 export default function AuthModal({ isOpen, onClose, defaultMode = 'login' }: AuthModalProps) {
   const [mode, setMode] = useState<'login' | 'signup'>(defaultMode)
   const [isLoading, setIsLoading] = useState(false)
+  const router = useRouter()
+  const searchParams = useSearchParams()
   const supabase = createClient()
 
   const loginForm = useForm<LoginForm>({
@@ -65,7 +68,11 @@ export default function AuthModal({ isOpen, onClose, defaultMode = 'login' }: Au
 
       toast.success('Welcome back!')
       onClose()
-      window.location.href = '/dashboard'
+      
+      // Handle redirect
+      const redirectTo = searchParams.get('redirectTo') || '/dashboard'
+      router.push(redirectTo)
+      router.refresh()
     } catch (error: any) {
       toast.error(error.message || 'Failed to login')
     } finally {
