@@ -10,9 +10,10 @@ const messageSchema = z.object({
 
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await context.params
     const supabase = await createClient()
     
     // Get authenticated user
@@ -28,7 +29,7 @@ export async function GET(
     const { data: project } = await supabase
       .from('projects')
       .select('client_id')
-      .eq('id', params.id)
+      .eq('id', id)
       .single()
 
     if (!project) {
@@ -63,7 +64,7 @@ export async function GET(
           role
         )
       `)
-      .eq('project_id', params.id)
+      .eq('project_id', id)
       .order('created_at', { ascending: true })
 
     if (error) throw error
