@@ -65,7 +65,7 @@ export default function AuthModal({ isOpen, onClose, defaultMode = 'login' }: Au
 
       toast.success('Welcome back!')
       onClose()
-      window.location.reload()
+      window.location.href = '/dashboard'
     } catch (error: any) {
       toast.error(error.message || 'Failed to login')
     } finally {
