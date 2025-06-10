@@ -84,9 +84,10 @@ export async function GET(
 
 export async function POST(
   request: Request,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await context.params
     const supabase = await createClient()
     
     // Get authenticated user
@@ -108,7 +109,7 @@ export async function POST(
     const { data, error } = await supabase
       .from('project_messages')
       .insert({
-        project_id: params.id,
+        project_id: id,
         sender_id: user.id,
         ...validatedData,
       })
