@@ -96,11 +96,32 @@ export default function EditServicePage() {
   const onSubmit = async (data: ServiceFormData) => {
     setSubmitting(true)
     try {
+      // Transform the data to match API expectations
+      const transformedData = {
+        title: data.title,
+        slug: data.slug,
+        category: data.category,
+        description: data.description,
+        base_price: data.base_price && data.base_price.trim() !== '' 
+          ? parseFloat(data.base_price) 
+          : undefined,
+        price_unit: data.price_unit && data.price_unit.trim() !== '' 
+          ? data.price_unit 
+          : undefined,
+        duration_estimate: data.duration_estimate && data.duration_estimate.trim() !== '' 
+          ? data.duration_estimate 
+          : undefined,
+        display_order: data.display_order && data.display_order.trim() !== '' 
+          ? parseInt(data.display_order) 
+          : undefined,
+        is_active: data.is_active,
+      }
+
       const res = await fetch(`/api/admin/services/${params.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          ...data,
+          ...transformedData,
           features: features.length > 0 ? features : null,
         }),
       })

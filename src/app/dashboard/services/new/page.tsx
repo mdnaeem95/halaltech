@@ -69,13 +69,34 @@ export default function NewServicePage() {
   const onSubmit = async (data: ServiceForm) => {
     setSubmitting(true)
     try {
+      // Transform the data to match API expectations
+      const transformedData = {
+        title: data.title,
+        slug: data.slug,
+        category: data.category,
+        description: data.description,
+        base_price: data.base_price && data.base_price.trim() !== '' 
+          ? parseFloat(data.base_price) 
+          : undefined,
+        price_unit: data.price_unit && data.price_unit.trim() !== '' 
+          ? data.price_unit 
+          : undefined,
+        duration_estimate: data.duration_estimate && data.duration_estimate.trim() !== '' 
+          ? data.duration_estimate 
+          : undefined,
+        display_order: data.display_order && data.display_order.trim() !== '' 
+          ? parseInt(data.display_order) 
+          : undefined,
+        is_active: data.is_active,
+        features: features.length > 0 ? features : undefined,
+      }
+
+      console.log('Sending data:', transformedData) // Debug log
+
       const res = await fetch('/api/admin/services', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...data,
-          features: features.length > 0 ? features : undefined,
-        }),
+        body: JSON.stringify(transformedData),
       })
 
       const result = await res.json()
@@ -84,6 +105,7 @@ export default function NewServicePage() {
         toast.success(result.message)
         router.push('/dashboard/services')
       } else {
+        console.error('API Error:', result) // Debug log
         toast.error(result.error || 'Failed to create service')
       }
     } catch (error) {
