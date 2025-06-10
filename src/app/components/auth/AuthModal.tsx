@@ -76,7 +76,7 @@ export default function AuthModal({ isOpen, onClose, defaultMode = 'login' }: Au
   const handleSignup = async (data: SignupForm) => {
     setIsLoading(true)
     try {
-      const { data: authData, error: authError } = await supabase.auth.signUp({
+      const { error: authError } = await supabase.auth.signUp({
         email: data.email,
         password: data.password,
         options: {
@@ -89,21 +89,6 @@ export default function AuthModal({ isOpen, onClose, defaultMode = 'login' }: Au
       })
 
       if (authError) throw authError
-
-      if (authData.user) {
-        // Create profile
-        const { error: profileError } = await supabase
-          .from('profiles')
-          .insert({
-            id: authData.user.id,
-            email: data.email,
-            full_name: data.fullName,
-            company_name: data.companyName,
-            phone: data.phone,
-          })
-
-        if (profileError) throw profileError
-      }
 
       toast.success('Account created! Please check your email to verify.')
       onClose()
