@@ -1,6 +1,6 @@
 /* eslint-disable  @typescript-eslint/no-explicit-any */
 import { NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server' // Changed import
+import { createClient } from '@/lib/supabase/server'
 import { z } from 'zod'
 
 const createProjectSchema = z.object({
@@ -13,7 +13,7 @@ const createProjectSchema = z.object({
 
 export async function GET() {
   try {
-    const supabase = await createClient() // Changed
+    const supabase = await createClient()
     
     // Get authenticated user
     const { data: { user }, error: userError } = await supabase.auth.getUser()
@@ -39,6 +39,12 @@ export async function GET() {
           id,
           title,
           category
+        ),
+        package:service_packages (
+          id,
+          name,
+          price,
+          delivery_days
         ),
         client:profiles!projects_client_id_fkey (
           id,
@@ -73,7 +79,7 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
-    const supabase = await createClient() // Changed
+    const supabase = await createClient()
     
     // Get authenticated user
     const { data: { user }, error: userError } = await supabase.auth.getUser()
@@ -87,6 +93,20 @@ export async function POST(request: Request) {
     const body = await request.json()
     const validatedData = createProjectSchema.parse(body)
 
+    // If package_id is provided, fetch the package price to set as quoted_price
+    let quoted_price = null
+    if (validatedData.package_id) {
+      const { data: packageData } = await supabase
+        .from('service_packages')
+        .select('price')
+        .eq('id', validatedData.package_id)
+        .single()
+      
+      if (packageData) {
+        quoted_price = packageData.price
+      }
+    }
+
     // Create project
     const { data, error } = await supabase
       .from('projects')
@@ -94,11 +114,15 @@ export async function POST(request: Request) {
         client_id: user.id,
         ...validatedData,
         status: 'inquiry',
+        ...(quoted_price && { quoted_price })
       })
       .select()
       .single()
 
     if (error) throw error
+
+    // TODO: Send notification to admin about new project inquiry
+    // await sendNewProjectNotification(data, user)
 
     return NextResponse.json({ 
       success: true, 
@@ -107,6 +131,18 @@ export async function POST(request: Request) {
     })
   } catch (error: any) {
     console.error('Project creation error:', error)
+    
+    if (error instanceof z.ZodError) {
+      return NextResponse.json(
+        { 
+          success: false, 
+          error: 'Validation error',
+          details: error.errors 
+        },
+        { status: 400 }
+      )
+    }
+
     return NextResponse.json(
       { 
         success: false, 

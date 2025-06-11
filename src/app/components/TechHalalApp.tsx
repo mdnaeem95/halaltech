@@ -9,6 +9,7 @@ import UserMenu from './auth/UserMenu'
 import toast, { Toaster } from 'react-hot-toast'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
+import dynamic from 'next/dynamic'
 
 const TechHalalApp = () => {
   const supabase = createClient()
@@ -27,6 +28,17 @@ const TechHalalApp = () => {
     message: ''
   })
   const [submittingContact, setSubmittingContact] = useState(false)
+  const [selectedService, setSelectedService] = useState<any>(null)
+  const [serviceModalOpen, setServiceModalOpen] = useState(false)
+
+  const ServiceDetailModal = dynamic(
+    () => import('./ServiceDetailModal'),
+    { 
+      loading: () => <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+        <Loader2 className="w-8 h-8 animate-spin text-white" />
+      </div>
+    }
+  )
 
   useEffect(() => {
     // Check auth status
@@ -311,15 +323,12 @@ const TechHalalApp = () => {
                     </span>
                     <button
                       onClick={() => {
-                        if (user) {
-                          window.location.href = '/dashboard/projects/new'
-                        } else {
-                          setAuthModalOpen(true)
-                        }
+                        setSelectedService(service)
+                        setServiceModalOpen(true)
                       }}
                       className="text-emerald-600 hover:text-emerald-700 font-medium flex items-center"
                     >
-                      Get Started <ArrowRight className="w-4 h-4 ml-1" />
+                      View Details <ArrowRight className="w-4 h-4 ml-1" />
                     </button>
                   </div>
                 </div>
@@ -597,6 +606,23 @@ const TechHalalApp = () => {
           onClose={() => setAuthModalOpen(false)}
         />
       </Suspense>
+
+      {/* Selected Service Modal */}
+      {selectedService && (
+        <ServiceDetailModal
+          service={selectedService}
+          isOpen={serviceModalOpen}
+          onClose={() => {
+            setServiceModalOpen(false)
+            setSelectedService(null)
+          }}
+          isAuthenticated={!!user}
+          onAuthRequired={() => {
+            setServiceModalOpen(false)
+            setAuthModalOpen(true)
+          }}
+        />
+      )}
     </div>
   )
 }

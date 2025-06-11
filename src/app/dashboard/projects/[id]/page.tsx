@@ -402,11 +402,29 @@ export default function ProjectDetailPage() {
                   <p className="mt-1 text-gray-900">{project.service?.title || 'N/A'}</p>
                 </div>
                 
+                {project.package && (
+                  <div>
+                    <label className="text-sm font-medium text-gray-500">Package</label>
+                    <p className="mt-1 text-gray-900 font-semibold">{project.package.name}</p>
+                  </div>
+                )}
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
                 {project.quoted_price && (
                   <div>
                     <label className="text-sm font-medium text-gray-500">Quoted Price</label>
                     <p className="mt-1 font-semibold text-emerald-600">
                       ${project.quoted_price.toLocaleString()}
+                    </p>
+                  </div>
+                )}
+                
+                {project.package && project.package.delivery_days && (
+                  <div>
+                    <label className="text-sm font-medium text-gray-500">Estimated Delivery</label>
+                    <p className="mt-1 text-gray-900">
+                      {project.package.delivery_days} days
                     </p>
                   </div>
                 )}
@@ -537,6 +555,15 @@ export default function ProjectDetailPage() {
                 {getStatusBadge(project.status)}
               </div>
               
+              {project.package && (
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-gray-600">Package</span>
+                  <span className="text-sm font-medium text-gray-900">
+                    {project.package.name}
+                  </span>
+                </div>
+              )}
+              
               {project.quoted_price && (
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-gray-600">Quote</span>
@@ -551,6 +578,15 @@ export default function ProjectDetailPage() {
                   <span className="text-sm text-gray-600">Deadline</span>
                   <span className="text-sm text-gray-900">
                     {format(new Date(project.deadline), 'MMM d, yyyy')}
+                  </span>
+                </div>
+              )}
+              
+              {project.package && project.package.delivery_days && !project.deadline && (
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-gray-600">Est. Delivery</span>
+                  <span className="text-sm text-gray-900">
+                    {project.package.delivery_days} days
                   </span>
                 </div>
               )}

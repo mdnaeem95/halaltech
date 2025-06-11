@@ -172,8 +172,15 @@ export default function ProjectsPage() {
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">
-                        {project.service?.title || 'N/A'}
+                      <div>
+                        <div className="text-sm text-gray-900">
+                          {project.service?.title || 'N/A'}
+                        </div>
+                        {project.package && (
+                          <div className="text-xs text-gray-500">
+                            {project.package.name} Package
+                          </div>
+                        )}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -182,8 +189,15 @@ export default function ProjectsPage() {
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {format(new Date(project.created_at), 'MMM d, yyyy')}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {project.quoted_price ? `$${project.quoted_price.toLocaleString()}` : '-'}
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-900">
+                        {project.quoted_price ? `$${project.quoted_price.toLocaleString()}` : '-'}
+                      </div>
+                      {project.package && !project.quoted_price && (
+                        <div className="text-xs text-gray-500">
+                          From ${project.package.price.toLocaleString()}
+                        </div>
+                      )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
                       <Link

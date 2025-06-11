@@ -3,11 +3,12 @@
 
 import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { ArrowLeft, Loader2, Plus, X } from 'lucide-react'
+import { ArrowLeft, Loader2, Package, Plus, X } from 'lucide-react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import toast from 'react-hot-toast'
+import Link from 'next/link'
 
 const serviceFormSchema = z.object({
   title: z.string().min(3, 'Title must be at least 3 characters'),
@@ -353,19 +354,19 @@ export default function EditServicePage() {
         </div>
 
         {/* Service Packages Section */}
-        {service.service_packages && service.service_packages.length > 0 && (
-          <div className="bg-white rounded-lg shadow p-6">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-lg font-semibold text-gray-900">Service Packages</h2>
-              <button
-                type="button"
-                onClick={() => router.push(`/dashboard/services/${params.id}/packages`)}
-                className="text-emerald-600 hover:text-emerald-700 font-medium text-sm"
-              >
-                Manage Packages
-              </button>
-            </div>
-            
+        <div className="bg-white rounded-lg shadow p-6">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-lg font-semibold text-gray-900">Service Packages</h2>
+            <Link
+              href={`/dashboard/services/${params.id}/packages`}
+              className="bg-emerald-600 text-white px-4 py-2 rounded-lg hover:bg-emerald-700 transition flex items-center text-sm"
+            >
+              <Package className="w-4 h-4 mr-2" />
+              Manage Packages
+            </Link>
+          </div>
+          
+          {service.service_packages && service.service_packages.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {service.service_packages.map((pkg: any) => (
                 <div key={pkg.id} className="border rounded-lg p-4">
@@ -384,8 +385,19 @@ export default function EditServicePage() {
                 </div>
               ))}
             </div>
-          </div>
-        )}
+          ) : (
+            <div className="text-center py-8 bg-gray-50 rounded-lg">
+              <Package className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+              <p className="text-gray-600 mb-4">No packages created yet</p>
+              <Link
+                href={`/dashboard/services/${params.id}/packages`}
+                className="text-emerald-600 hover:text-emerald-700 font-medium"
+              >
+                Create your first package
+              </Link>
+            </div>
+          )}
+        </div>        
 
         <div className="bg-white rounded-lg shadow p-6">
           <h2 className="text-lg font-semibold text-gray-900 mb-4">Settings</h2>

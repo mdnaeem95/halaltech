@@ -269,7 +269,15 @@ export default function ServicesPage() {
                   </div>
                 )}
 
+                {/* Action Buttons */}
                 <div className="flex space-x-2">
+                  <Link
+                    href={`/dashboard/services/${service.id}/packages`}
+                    className="flex-1 bg-emerald-100 text-emerald-700 py-2 rounded-lg hover:bg-emerald-200 transition flex items-center justify-center"
+                  >
+                    <Package className="w-4 h-4 mr-2" />
+                    Packages ({service.service_packages?.length || 0})
+                  </Link>
                   <Link
                     href={`/dashboard/services/${service.id}/edit`}
                     className="flex-1 bg-gray-100 text-gray-700 py-2 rounded-lg hover:bg-gray-200 transition flex items-center justify-center"
