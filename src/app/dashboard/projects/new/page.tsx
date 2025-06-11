@@ -42,6 +42,8 @@ export default function NewProjectPage() {
       const data = await res.json()
       if (data.success) {
         setServices(data.data)
+      } else {
+        toast.error('Failed to load services')
       }
     } catch (error) {
       console.error('Failed to fetch services:', error)
@@ -54,6 +56,8 @@ export default function NewProjectPage() {
   const onSubmit = async (data: ProjectForm) => {
     setSubmitting(true)
     try {
+      console.log('Submitting project data:', data) // Debug log
+
       const res = await fetch('/api/projects', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -61,9 +65,10 @@ export default function NewProjectPage() {
       })
 
       const result = await res.json()
+      console.log('API Response:', result) // Debug log
 
       if (result.success) {
-        toast.success(result.message)
+        toast.success(result.message || 'Project inquiry submitted successfully!')
         router.push('/dashboard/projects')
       } else {
         toast.error(result.error || 'Failed to create project')
@@ -114,7 +119,7 @@ export default function NewProjectPage() {
               <option value="">Select a service</option>
               {services.map((service) => (
                 <option key={service.id} value={service.id}>
-                  {service.title} - From ${service.base_price?.toLocaleString()}
+                  {service.title} - From ${service.base_price?.toLocaleString() || 'Custom Pricing'}
                 </option>
               ))}
             </select>
