@@ -16,15 +16,20 @@ import {
   AlertCircle,
   FileText,
   Save,
-  X
+  X,
+  Calculator,
+  Eye,
+  Receipt
 } from 'lucide-react'
 import toast from 'react-hot-toast'
+import Link from 'next/link'
 
 export default function ProjectDetailPage() {
   const params = useParams()
   const router = useRouter()
   const [project, setProject] = useState<any>(null)
   const [messages, setMessages] = useState<any[]>([])
+  const [quote, setQuote] = useState<any>(null)
   const [newMessage, setNewMessage] = useState('')
   const [loading, setLoading] = useState(true)
   const [sendingMessage, setSendingMessage] = useState(false)
@@ -44,6 +49,7 @@ export default function ProjectDetailPage() {
     if (params.id) {
       fetchProject()
       fetchMessages()
+      fetchQuote()
     }
   }, [params.id])
 
@@ -81,6 +87,18 @@ export default function ProjectDetailPage() {
       }
     } catch (error) {
       console.error('Failed to fetch messages:', error)
+    }
+  }
+
+  const fetchQuote = async () => {
+    try {
+      const res = await fetch(`/api/projects/${params.id}/quote`)
+      const data = await res.json()
+      if (data.success && data.data) {
+        setQuote(data.data)
+      }
+    } catch (error) {
+      console.error('Failed to fetch quote:', error)
     }
   }
 
@@ -251,90 +269,135 @@ export default function ProjectDetailPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Main Content */}
         <div className="lg:col-span-2 space-y-6">
-          {/* Project Management Panel (Admin Only) */}
-          {isAdmin && editingProject && (
+          {/* Admin Quote & Project Management Panel */}
+          {isAdmin && (
             <div className="bg-white rounded-lg shadow p-6 border-2 border-emerald-100">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-semibold text-gray-900">Project Management</h2>
-                <div className="flex space-x-2">
-                  <button
-                    onClick={updateProject}
-                    disabled={updating}
-                    className="bg-emerald-600 text-white px-4 py-2 rounded-lg hover:bg-emerald-700 transition flex items-center disabled:opacity-50"
-                  >
-                    <Save className="w-4 h-4 mr-2" />
-                    {updating ? 'Saving...' : 'Save Changes'}
-                  </button>
-                  <button
-                    onClick={() => setEditingProject(false)}
-                    className="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300 transition"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
+              <h2 className="text-lg font-semibold text-gray-900 mb-4">Admin Actions</h2>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
-                  <select
-                    value={projectForm.status}
-                    onChange={(e) => setProjectForm({...projectForm, status: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
-                  >
-                    <option value="inquiry">Inquiry</option>
-                    <option value="quoted">Quoted</option>
-                    <option value="in_progress">In Progress</option>
-                    <option value="review">In Review</option>
-                    <option value="completed">Completed</option>
-                    <option value="cancelled">Cancelled</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Quoted Price (SGD)</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={projectForm.quoted_price}
-                    onChange={(e) => setProjectForm({...projectForm, quoted_price: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
-                    placeholder="5000"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Final Price (SGD)</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={projectForm.final_price}
-                    onChange={(e) => setProjectForm({...projectForm, final_price: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
-                    placeholder="4800"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Start Date</label>
-                  <input
-                    type="date"
-                    value={projectForm.start_date}
-                    onChange={(e) => setProjectForm({...projectForm, start_date: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Deadline</label>
-                  <input
-                    type="date"
-                    value={projectForm.deadline}
-                    onChange={(e) => setProjectForm({...projectForm, deadline: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
-                  />
+              {/* Quote Management */}
+              <div className="mb-6">
+                <h3 className="text-md font-medium text-gray-700 mb-3">Quote Management</h3>
+                <div className="flex flex-wrap gap-2">
+                  {project.status === 'inquiry' && !quote && (
+                    <Link
+                      href={`/dashboard/projects/${params.id}/quote`}
+                      className="bg-emerald-600 text-white px-4 py-2 rounded-lg hover:bg-emerald-700 transition flex items-center"
+                    >
+                      <Calculator className="w-4 h-4 mr-2" />
+                      Create Quote
+                      {project.package && (
+                        <span className="ml-2 text-xs bg-emerald-500 px-2 py-1 rounded">
+                          Auto-fill from {project.package.name}
+                        </span>
+                      )}
+                    </Link>
+                  )}
+                  
+                  {quote && (
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => router.push(`/dashboard/projects/${params.id}/quote`)}
+                        className="bg-blue-100 text-blue-800 px-4 py-2 rounded-lg hover:bg-blue-200 transition flex items-center"
+                      >
+                        <Eye className="w-4 h-4 mr-2" />
+                        View Quote (${quote.amount.toLocaleString()})
+                      </button>
+                      
+                      {project.status === 'quoted' && (
+                        <span className="bg-yellow-100 text-yellow-800 px-3 py-2 rounded-lg text-sm flex items-center">
+                          <Clock className="w-4 h-4 mr-1" />
+                          Awaiting Client Response
+                        </span>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
+
+              {/* Project Management */}
+              {editingProject && (
+                <div className="border-t pt-4">
+                  <h3 className="text-md font-medium text-gray-700 mb-3">Project Details</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
+                      <select
+                        value={projectForm.status}
+                        onChange={(e) => setProjectForm({...projectForm, status: e.target.value})}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                      >
+                        <option value="inquiry">Inquiry</option>
+                        <option value="quoted">Quoted</option>
+                        <option value="in_progress">In Progress</option>
+                        <option value="review">In Review</option>
+                        <option value="completed">Completed</option>
+                        <option value="cancelled">Cancelled</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Quoted Price (SGD)</label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={projectForm.quoted_price}
+                        onChange={(e) => setProjectForm({...projectForm, quoted_price: e.target.value})}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                        placeholder="5000"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Final Price (SGD)</label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={projectForm.final_price}
+                        onChange={(e) => setProjectForm({...projectForm, final_price: e.target.value})}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                        placeholder="4800"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Start Date</label>
+                      <input
+                        type="date"
+                        value={projectForm.start_date}
+                        onChange={(e) => setProjectForm({...projectForm, start_date: e.target.value})}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Deadline</label>
+                      <input
+                        type="date"
+                        value={projectForm.deadline}
+                        onChange={(e) => setProjectForm({...projectForm, deadline: e.target.value})}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                      />
+                    </div>
+                  </div>
+                  
+                  <div className="flex gap-3 mt-4">
+                    <button
+                      onClick={updateProject}
+                      disabled={updating}
+                      className="bg-emerald-600 text-white px-4 py-2 rounded-lg hover:bg-emerald-700 transition flex items-center disabled:opacity-50"
+                    >
+                      <Save className="w-4 h-4 mr-2" />
+                      {updating ? 'Saving...' : 'Save Changes'}
+                    </button>
+                    <button
+                      onClick={() => setEditingProject(false)}
+                      className="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300 transition"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -406,6 +469,7 @@ export default function ProjectDetailPage() {
                   <div>
                     <label className="text-sm font-medium text-gray-500">Package</label>
                     <p className="mt-1 text-gray-900 font-semibold">{project.package.name}</p>
+                    <p className="text-sm text-gray-600">${project.package.price.toLocaleString()}</p>
                   </div>
                 )}
               </div>
@@ -592,6 +656,27 @@ export default function ProjectDetailPage() {
               )}
             </div>
           </div>
+
+          {/* Related Invoices */}
+          {(project.status === 'in_progress' || project.status === 'completed') && (
+            <div className="bg-white rounded-lg shadow p-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Invoices</h3>
+              <div className="space-y-2">
+                <button className="w-full text-left p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition flex items-center justify-between">
+                  <div className="flex items-center">
+                    <Receipt className="w-4 h-4 text-gray-400 mr-3" />
+                    <div>
+                      <p className="text-sm font-medium text-gray-900">Project Invoice</p>
+                      <p className="text-xs text-gray-500">Generated automatically</p>
+                    </div>
+                  </div>
+                  <span className="text-sm text-emerald-600 font-medium">
+                    ${(project.quoted_price || 0) * 1.09}
+                  </span>
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

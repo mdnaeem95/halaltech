@@ -11,6 +11,10 @@ import {
   DollarSign,
   Calendar,
   Send,
+  Package,
+  CheckCircle,
+  Info,
+  RefreshCw
 } from 'lucide-react'
 import { useForm, useFieldArray } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -44,8 +48,11 @@ interface Project {
     base_price?: number
   }
   package?: {
+    id: string
     name: string
     price: number
+    delivery_days: number
+    revisions?: number
     features?: string[]
   }
   quoted_price?: number
@@ -59,6 +66,7 @@ export default function CreateQuotePage() {
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [existingQuote, setExistingQuote] = useState<any>(null)
+  const [packageLoaded, setPackageLoaded] = useState(false)
 
   const {
     register,
@@ -66,13 +74,13 @@ export default function CreateQuotePage() {
     control,
     formState: { errors },
     watch,
-    setValue,
+    reset,
   } = useForm<QuoteForm>({
     resolver: zodResolver(quoteSchema),
     defaultValues: {
       amount: '',
       deliverables: [{ title: '', description: '' }],
-      payment_terms: '50% upfront, 50% upon completion',
+      payment_terms: '50% upfront upon quote acceptance, 50% upon project completion',
       valid_days: '7',
     }
   })
@@ -91,13 +99,14 @@ export default function CreateQuotePage() {
     }
   }, [params.id])
 
-  // Pre-populate with package features if available
+  // Auto-populate with package data using proper timing
   useEffect(() => {
-    if (project?.package?.features && fields.length === 1 && !fields[0].title) {
-      remove(0)
-      project.package.features.forEach(feature => {
-        append({ title: feature, description: '' })
-      })
+    if (project && !packageLoaded) {
+      // Use setTimeout to ensure form fields are registered before setting values
+      setTimeout(() => {
+        loadPackageData()
+        setPackageLoaded(true)
+      }, 0)
     }
   }, [project])
 
@@ -109,13 +118,7 @@ export default function CreateQuotePage() {
       
       if (projectData.success) {
         setProject(projectData.data)
-        
-        // Set initial amount based on package or service price
-        if (projectData.data.package?.price) {
-          setValue('amount', projectData.data.package.price.toString())
-        } else if (projectData.data.service?.base_price) {
-          setValue('amount', projectData.data.service.base_price.toString())
-        }
+        console.log('Project data loaded:', projectData.data) // Debug log
       } else {
         toast.error('Failed to fetch project')
         router.push('/dashboard/projects')
@@ -134,6 +137,117 @@ export default function CreateQuotePage() {
       toast.error('Failed to load project details')
     } finally {
       setLoading(false)
+    }
+  }
+
+  const loadPackageData = () => {
+    if (!project) return
+
+    console.log('Loading package data:', project.package) // Debug log
+
+    // Prepare the form data object
+    const formData: any = {}
+    const packageDeliverables: { title: string; description: string }[] = []
+
+    // Set initial amount based on package or service price
+    if (project.package?.price) {
+      formData.amount = project.package.price.toString()
+      console.log('Setting amount from package:', project.package.price) // Debug log
+      toast.success(`Amount pre-filled from ${project.package.name} package (${project.package.price})`)
+    } else if (project.service?.base_price) {
+      formData.amount = project.service.base_price.toString()
+      console.log('Setting amount from service:', project.service.base_price) // Debug log
+      toast.success('Amount pre-filled from service base price')
+    }
+
+    // Set deliverables based on package features
+    if (project.package?.features && project.package.features.length > 0) {
+      project.package.features.forEach(feature => {
+        packageDeliverables.push({
+          title: feature,
+          description: ''
+        })
+      })
+      
+      // Add some default deliverables based on service type
+      const additionalDeliverables = getDefaultDeliverablesForService(project.service.title)
+      packageDeliverables.push(...additionalDeliverables)
+      
+      toast.success(`${project.package.features.length} deliverables loaded from ${project.package.name} package`)
+    } else {
+      // Load default deliverables based on service type
+      const defaultDeliverables = getDefaultDeliverablesForService(project.service.title)
+      packageDeliverables.push(...defaultDeliverables)
+      
+      if (defaultDeliverables.length > 0) {
+        toast.success('Default deliverables loaded based on service type')
+      }
+    }
+
+    // Update payment terms if package has specific terms
+    if (project.package) {
+      formData.payment_terms = `50% upfront upon quote acceptance, 50% upon project completion. Estimated delivery: ${project.package.delivery_days} days${project.package.revisions ? `. Includes ${project.package.revisions} rounds of revisions` : ''}.`
+    }
+
+    // Use reset instead of setValue for bulk updates (more reliable)
+    reset({
+      amount: formData.amount || '',
+      deliverables: packageDeliverables.length > 0 ? packageDeliverables : [{ title: '', description: '' }],
+      payment_terms: formData.payment_terms || '50% upfront upon quote acceptance, 50% upon project completion',
+      valid_days: '7',
+    })
+
+    console.log('Form reset with:', {
+      amount: formData.amount,
+      deliverables: packageDeliverables.length,
+      payment_terms: formData.payment_terms
+    }) // Debug log
+  }
+
+  const getDefaultDeliverablesForService = (serviceTitle: string): { title: string; description: string }[] => {
+    const serviceLower = serviceTitle.toLowerCase()
+    
+    if (serviceLower.includes('website') || serviceLower.includes('web')) {
+      return [
+        { title: 'Responsive Web Design', description: 'Mobile-friendly design that works on all devices' },
+        { title: 'Content Management System', description: 'Easy-to-use admin panel for content updates' },
+        { title: 'SEO Optimization', description: 'Basic search engine optimization setup' },
+        { title: 'Testing & Quality Assurance', description: 'Comprehensive testing across browsers and devices' },
+        { title: 'Training & Documentation', description: 'User guide and training session' }
+      ]
+    } else if (serviceLower.includes('mobile') || serviceLower.includes('app')) {
+      return [
+        { title: 'Native Mobile Application', description: 'iOS and/or Android native app development' },
+        { title: 'User Interface Design', description: 'Intuitive and engaging mobile UI/UX' },
+        { title: 'Backend Integration', description: 'API development and database setup' },
+        { title: 'App Store Optimization', description: 'App store listing setup and optimization' },
+        { title: 'Testing & Deployment', description: 'Comprehensive testing and app store submission' }
+      ]
+    } else if (serviceLower.includes('design')) {
+      return [
+        { title: 'Brand Identity Design', description: 'Logo, colors, typography, and brand guidelines' },
+        { title: 'Digital Assets', description: 'Business cards, letterheads, and marketing materials' },
+        { title: 'Style Guide', description: 'Comprehensive brand style guide document' },
+        { title: 'Revisions & Refinements', description: 'Multiple rounds of design iterations' }
+      ]
+    }
+    
+    return [
+      { title: 'Project Analysis & Planning', description: 'Detailed project requirements and timeline' },
+      { title: 'Development & Implementation', description: 'Core development work and features' },
+      { title: 'Testing & Quality Assurance', description: 'Comprehensive testing and bug fixes' },
+      { title: 'Delivery & Support', description: 'Final delivery with documentation and support' }
+    ]
+  }
+
+  const resetToPackageDefaults = () => {
+    if (project) {
+      setPackageLoaded(false)
+      // Use setTimeout to ensure proper timing
+      setTimeout(() => {
+        loadPackageData()
+        setPackageLoaded(true)
+      }, 0)
     }
   }
 
@@ -211,14 +325,15 @@ export default function CreateQuotePage() {
           </button>
           
           <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+            <h2 className="text-lg font-semibold text-yellow-800 mb-2">Quote Already Exists</h2>
             <p className="text-yellow-800">
               A quote has already been created for this project on {format(new Date(existingQuote.created_at), 'MMM d, yyyy')}.
             </p>
-            <p className="text-sm text-yellow-700 mt-1">
-              Amount: ${existingQuote.amount.toLocaleString()} • 
-              Valid until: {format(new Date(existingQuote.valid_until), 'MMM d, yyyy')} • 
-              Status: {existingQuote.is_accepted ? 'Accepted' : 'Pending'}
-            </p>
+            <div className="mt-3 text-sm text-yellow-700 space-y-1">
+              <p>• Amount: ${existingQuote.amount.toLocaleString()}</p>
+              <p>• Valid until: {format(new Date(existingQuote.valid_until), 'MMM d, yyyy')}</p>
+              <p>• Status: {existingQuote.is_accepted ? 'Accepted' : 'Pending'}</p>
+            </div>
           </div>
         </div>
       </div>
@@ -245,6 +360,39 @@ export default function CreateQuotePage() {
           Prepare a detailed quote for {project.client.full_name}
         </p>
       </div>
+
+      {/* Package Information Banner */}
+      {project.package && (
+        <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4 mb-6">
+          <div className="flex items-start justify-between">
+            <div className="flex items-center">
+              <Package className="w-5 h-5 text-emerald-600 mr-3" />
+              <div>
+                <h3 className="font-semibold text-emerald-900">
+                  Package: {project.package.name}
+                </h3>
+                <p className="text-emerald-700 text-sm">
+                  ${project.package.price.toLocaleString()} • {project.package.delivery_days} days
+                  {project.package.revisions && ` • ${project.package.revisions} revisions`}
+                </p>
+                {project.package.features && (
+                  <p className="text-emerald-600 text-xs mt-1">
+                    {project.package.features.length} features auto-loaded as deliverables
+                  </p>
+                )}
+              </div>
+            </div>
+            <button
+              onClick={resetToPackageDefaults}
+              className="text-emerald-600 hover:text-emerald-800 text-sm flex items-center"
+              title="Reset to package defaults"
+            >
+              <RefreshCw className="w-4 h-4 mr-1" />
+              Reset
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Project Summary */}
       <div className="bg-white rounded-lg shadow p-6 mb-6">
@@ -294,6 +442,12 @@ export default function CreateQuotePage() {
                   placeholder="5000"
                 />
               </div>
+              {project.package && (
+                <p className="mt-1 text-xs text-gray-500">
+                  <CheckCircle className="w-3 h-3 inline mr-1 text-emerald-500" />
+                  Pre-filled from {project.package.name} package
+                </p>
+              )}
               {errors.amount && (
                 <p className="mt-1 text-sm text-red-600">{errors.amount.message}</p>
               )}
@@ -358,6 +512,18 @@ export default function CreateQuotePage() {
             </button>
           </div>
 
+          {project.package && project.package.features && (
+            <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+              <div className="flex items-center text-blue-800 text-sm">
+                <Info className="w-4 h-4 mr-2" />
+                <span>
+                  {project.package.features.length} deliverables loaded from {project.package.name} package. 
+                  You can modify, add, or remove items as needed.
+                </span>
+              </div>
+            </div>
+          )}
+
           <div className="space-y-4">
             {fields.map((field, index) => (
               <div key={field.id} className="border rounded-lg p-4">
@@ -408,10 +574,16 @@ export default function CreateQuotePage() {
           <h2 className="text-lg font-semibold text-gray-900 mb-4">Payment Terms</h2>
           <textarea
             {...register('payment_terms')}
-            rows={3}
+            rows={4}
             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
             placeholder="e.g., 50% upfront payment upon quote acceptance, 50% upon project completion"
           />
+          {project.package && (
+            <p className="mt-1 text-xs text-gray-500">
+              <CheckCircle className="w-3 h-3 inline mr-1 text-emerald-500" />
+              Terms updated to include {project.package.delivery_days} day delivery timeline
+            </p>
+          )}
           {errors.payment_terms && (
             <p className="mt-1 text-sm text-red-600">{errors.payment_terms.message}</p>
           )}
@@ -442,6 +614,18 @@ export default function CreateQuotePage() {
           </button>
         </div>
       </form>
+
+      {/* Quote Preview */}
+      <div className="mt-8 bg-blue-50 border border-blue-200 rounded-lg p-6">
+        <h3 className="font-semibold text-blue-900 mb-3">What happens next?</h3>
+        <ol className="list-decimal list-inside space-y-1 text-sm text-blue-800">
+          <li>Quote will be sent to {project.client.full_name} via email</li>
+          <li>Client can review and accept/reject the quote from their dashboard</li>
+          <li>If accepted, project status will automatically update to &quot;In Progress&quot;</li>
+          <li>An invoice will be automatically generated for payment</li>
+          <li>You&apos;ll receive a notification when the client responds</li>
+        </ol>
+      </div>
     </div>
   )
 }
