@@ -143,7 +143,12 @@ export default function CreateQuotePage() {
   const loadPackageData = () => {
     if (!project) return
 
-    console.log('Loading package data:', project.package) // Debug log
+    console.log('=== PACKAGE DATA DEBUG ===')
+    console.log('Full project object:', project)
+    console.log('Package ID from project:', project.package?.id)
+    console.log('Package object from project:', project.package)
+    console.log('Service base price:', project.service?.base_price)
+    console.log('========================')
 
     // Prepare the form data object
     const formData: any = {}
@@ -152,12 +157,15 @@ export default function CreateQuotePage() {
     // Set initial amount based on package or service price
     if (project.package?.price) {
       formData.amount = project.package.price.toString()
-      console.log('Setting amount from package:', project.package.price) // Debug log
-      toast.success(`Amount pre-filled from ${project.package.name} package (${project.package.price})`)
+      console.log('✅ Setting amount from package:', project.package.price)
+      toast.success(`Amount pre-filled: ${project.package.price.toLocaleString()} from ${project.package.name} package`)
     } else if (project.service?.base_price) {
       formData.amount = project.service.base_price.toString()
-      console.log('Setting amount from service:', project.service.base_price) // Debug log
-      toast.success('Amount pre-filled from service base price')
+      console.log('⚠️ Setting amount from service base price:', project.service.base_price)
+      toast.error(`Package data missing - using service base price: ${project.service.base_price.toLocaleString()}`)
+    } else {
+      console.log('❌ No pricing data found')
+      toast.error('No pricing data found for this project')
     }
 
     // Set deliverables based on package features
@@ -173,6 +181,7 @@ export default function CreateQuotePage() {
       const additionalDeliverables = getDefaultDeliverablesForService(project.service.title)
       packageDeliverables.push(...additionalDeliverables)
       
+      console.log('✅ Loaded deliverables from package:', project.package.features.length)
       toast.success(`${project.package.features.length} deliverables loaded from ${project.package.name} package`)
     } else {
       // Load default deliverables based on service type
@@ -180,28 +189,31 @@ export default function CreateQuotePage() {
       packageDeliverables.push(...defaultDeliverables)
       
       if (defaultDeliverables.length > 0) {
-        toast.success('Default deliverables loaded based on service type')
+        console.log('⚠️ Using default deliverables for service type')
+        toast.success('Using default deliverables based on service type (package features not found)')
       }
     }
 
     // Update payment terms if package has specific terms
     if (project.package) {
       formData.payment_terms = `50% upfront upon quote acceptance, 50% upon project completion. Estimated delivery: ${project.package.delivery_days} days${project.package.revisions ? `. Includes ${project.package.revisions} rounds of revisions` : ''}.`
+      console.log('✅ Updated payment terms with package details')
+    } else {
+      console.log('⚠️ Using default payment terms')
     }
 
     // Use reset instead of setValue for bulk updates (more reliable)
-    reset({
+    const resetData = {
       amount: formData.amount || '',
       deliverables: packageDeliverables.length > 0 ? packageDeliverables : [{ title: '', description: '' }],
       payment_terms: formData.payment_terms || '50% upfront upon quote acceptance, 50% upon project completion',
       valid_days: '7',
-    })
+    }
 
-    console.log('Form reset with:', {
-      amount: formData.amount,
-      deliverables: packageDeliverables.length,
-      payment_terms: formData.payment_terms
-    }) // Debug log
+    console.log('🔄 Resetting form with data:', resetData)
+    reset(resetData)
+
+    console.log('=== END DEBUG ===')
   }
 
   const getDefaultDeliverablesForService = (serviceTitle: string): { title: string; description: string }[] => {

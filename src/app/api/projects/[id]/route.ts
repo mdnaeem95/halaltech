@@ -37,6 +37,15 @@ export async function GET(
           category,
           base_price
         ),
+        package:service_packages (
+          id,
+          name,
+          price,
+          delivery_days,
+          revisions,
+          features,
+          is_popular
+        ),
         client:profiles!projects_client_id_fkey (
           id,
           full_name,
