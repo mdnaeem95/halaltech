@@ -3,6 +3,7 @@ import { useState } from 'react'
 import toast from 'react-hot-toast'
 import { useAuth } from './useAuth'
 import { ForgotPasswordFormData, LoginForm, SignupFormData } from '@/types/auth'
+import { authRateLimiter } from '@/utils/auth/rateLimiter'
 
 
 export const useAuthModal = () => {
@@ -10,6 +11,14 @@ export const useAuthModal = () => {
   const { signIn, signUp, sendPasswordReset } = useAuth() // Use your existing auth methods
 
   const login = async (data: LoginForm) => {
+    const rateLimitKey = `login_${data.email}`
+
+    if (authRateLimiter.isLimited(rateLimitKey)) {
+      const remainingTime = authRateLimiter.getRemainingTime(rateLimitKey)
+      toast.error(`Too many attempts. Please try again in ${remainingTime} seconds.`)
+      return false
+    }
+    
     setIsLoading(true)
     try {
       // Just call your existing signIn method - let AuthProvider handle the rest

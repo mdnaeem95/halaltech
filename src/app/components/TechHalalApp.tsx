@@ -1,7 +1,7 @@
 // src/app/components/TechHalalApp.tsx
 'use client'
 
-import React, { useState, useEffect, Suspense } from 'react'
+import React, { useState, useEffect } from 'react'
 import { User } from '@supabase/supabase-js'
 import dynamic from 'next/dynamic'
 import { Toaster } from 'react-hot-toast'
@@ -25,6 +25,7 @@ import AuthModal from './auth/AuthModal'
 // Custom Hooks
 import { useServices } from '@/hooks/useServices'
 import { useContactForm } from '@/hooks/useContactForm'
+import { AuthErrorBoundary } from './auth/AuthErrorBoundary'
 
 // Dynamic import for Service Detail Modal
 const ServiceDetailModal = dynamic(
@@ -126,12 +127,12 @@ const TechHalalApp: React.FC = () => {
       <Footer />
 
       {/* Modals */}
-      <Suspense>
+      <AuthErrorBoundary>
         <AuthModal
           isOpen={authModalOpen}
           onClose={() => setAuthModalOpen(false)}
         />
-      </Suspense>
+      </AuthErrorBoundary>
 
       {selectedService && (
         <ServiceDetailModal

@@ -35,6 +35,20 @@ export async function updateSession(request: NextRequest) {
     error
   } = await supabase.auth.getUser()
 
+  // Add session refresh error handling
+  if (error && error.message.includes('refresh_token_not_found')) {
+    // Clear invalid session cookies
+    supabaseResponse.cookies.delete('sb-access-token')
+    supabaseResponse.cookies.delete('sb-refresh-token')
+    
+    if (request.nextUrl.pathname.startsWith('/dashboard')) {
+      const url = request.nextUrl.clone()
+      url.pathname = '/login'
+      url.searchParams.set('error', 'session_expired')
+      return NextResponse.redirect(url)
+    }
+  }
+
   // Define protected routes that require authentication
   const protectedRoutes = ['/dashboard']
   const authRoutes = ['/login', '/signup']
