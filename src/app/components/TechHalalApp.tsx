@@ -1,7 +1,7 @@
 // src/app/components/TechHalalApp.tsx
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, Suspense } from 'react'
 import { User } from '@supabase/supabase-js'
 import dynamic from 'next/dynamic'
 import { Toaster } from 'react-hot-toast'
@@ -128,10 +128,12 @@ const TechHalalApp: React.FC = () => {
 
       {/* Modals */}
       <AuthErrorBoundary>
+        <Suspense>
         <AuthModal
           isOpen={authModalOpen}
           onClose={() => setAuthModalOpen(false)}
         />
+        </Suspense>
       </AuthErrorBoundary>
 
       {selectedService && (
