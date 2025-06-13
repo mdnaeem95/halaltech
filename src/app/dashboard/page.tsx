@@ -1,16 +1,16 @@
 /* eslint-disable  @typescript-eslint/no-explicit-any */
+// src/app/dashboard/page.tsx (Updated)
 import DashboardStats from './components/DashboardStats'
 import RecentProjects from './components/RecentProjects'
+import FreelancerDashboard from './components/FreelancerDashboard'
 import { createClient } from '@/lib/supabase/server'
 
 export default async function DashboardPage() {
   const supabase = await createClient()
   
-  // The layout already checks authentication, so we can proceed
   const { data: { user } } = await supabase.auth.getUser()
   
   if (!user) {
-    // This shouldn't happen due to middleware, but as a fallback
     return (
       <div className="flex items-center justify-center h-64">
         <div className="text-center">
@@ -26,16 +26,22 @@ export default async function DashboardPage() {
     .eq('id', user.id)
     .single()
 
-  // Get stats based on role
+  // If user is a freelancer/service_provider, show freelancer dashboard
+  if (profile?.role === 'service_provider') {
+    return <FreelancerDashboard userId={user.id} profile={profile} />
+  }
+
+  // Otherwise show client/admin dashboard
   let stats
   try {
     if (profile?.role === 'admin') {
       // Admin stats
-      const [projectsCount, clientsCount, pendingCount, revenueData] = await Promise.all([
+      const [projectsCount, clientsCount, pendingCount, revenueData, freelancersCount] = await Promise.all([
         supabase.from('projects').select('id', { count: 'exact' }),
         supabase.from('profiles').select('id', { count: 'exact' }).eq('role', 'client'),
         supabase.from('projects').select('id', { count: 'exact' }).eq('status', 'inquiry'),
         supabase.from('invoices').select('total_amount').eq('status', 'paid'),
+        supabase.from('profiles').select('id', { count: 'exact' }).eq('role', 'service_provider'),
       ])
 
       const totalRevenue = revenueData.data?.reduce((sum: any, inv: any) => sum + Number(inv.total_amount || 0), 0) || 0
@@ -43,6 +49,7 @@ export default async function DashboardPage() {
       stats = {
         totalProjects: projectsCount.count || 0,
         totalClients: clientsCount.count || 0,
+        totalFreelancers: freelancersCount.count || 0,
         pendingInquiries: pendingCount.count || 0,
         totalRevenue: totalRevenue,
       }
@@ -78,6 +85,7 @@ export default async function DashboardPage() {
       stats = {
         totalProjects: 0,
         totalClients: 0,
+        totalFreelancers: 0,
         pendingInquiries: 0,
         totalRevenue: 0,
       }

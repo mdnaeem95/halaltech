@@ -19,10 +19,12 @@ import {
   X,
   Calculator,
   Eye,
-  Receipt
+  Receipt,
+  UserCheck
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import Link from 'next/link'
+import AssignFreelancerModal from './components/AssignFreelancerModal'
 
 export default function ProjectDetailPage() {
   const params = useParams()
@@ -33,6 +35,7 @@ export default function ProjectDetailPage() {
   const [newMessage, setNewMessage] = useState('')
   const [loading, setLoading] = useState(true)
   const [sendingMessage, setSendingMessage] = useState(false)
+  const [showAssignModal, setShowAssignModal] = useState(false)
   
   // Admin management states
   const [editingProject, setEditingProject] = useState(false)
@@ -442,6 +445,16 @@ export default function ProjectDetailPage() {
             </div>
           )}
 
+          {isAdmin && project.status !== 'completed' && project.status !== 'cancelled' && (
+            <button
+              onClick={() => setShowAssignModal(true)}
+              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition flex items-center"
+            >
+              <UserCheck className="w-4 h-4 mr-2" />
+              Assign Freelancer
+            </button>
+          )}
+
           {/* Project Details */}
           <div className="bg-white rounded-lg shadow p-6">
             <h2 className="text-lg font-semibold text-gray-900 mb-4">Project Details</h2>
@@ -678,6 +691,19 @@ export default function ProjectDetailPage() {
             </div>
           )}
         </div>
+
+        <AssignFreelancerModal
+          isOpen={showAssignModal}
+          onClose={() => setShowAssignModal(false)}
+          projectId={project.id}
+          projectTitle={project.title}
+          serviceCategory={project.service?.category || 'web'}
+          onSuccess={() => {
+            // Refresh project data
+            fetchProject()
+            toast.success('Freelancer assigned successfully')
+          }}
+        />
       </div>
     </div>
   )
