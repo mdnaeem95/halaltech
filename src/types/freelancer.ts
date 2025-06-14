@@ -21,6 +21,8 @@ export interface FreelancerProfile {
   onboarding_completed: boolean
   created_at: string
   updated_at: string
+  freelancer_skills?: FreelancerSkill[]
+  project_assignments?: ProjectAssignment[]
 }
 
 export interface FreelancerSkill {

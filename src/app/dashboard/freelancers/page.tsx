@@ -308,12 +308,14 @@ export default function FreelancersPage() {
 // Freelancer Card Component
 function FreelancerCard({ freelancer }: { freelancer: FreelancerProfile }) {
   const getAvailabilityBadge = (status: string) => {
-    const config: any = {
+    const statusConfig: Record<string, { bg: string; text: string; icon: any }> = {
       available: { bg: 'bg-green-100', text: 'text-green-800', icon: Check },
       busy: { bg: 'bg-yellow-100', text: 'text-yellow-800', icon: Lock },
       unavailable: { bg: 'bg-red-100', text: 'text-red-800', icon: X },
-    }[status] || config.available
+    }
 
+    // Use the config for the status, or default to available
+    const config = statusConfig[status] || statusConfig.available
     const Icon = config.icon
 
     return (

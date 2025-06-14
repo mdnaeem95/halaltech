@@ -4,57 +4,59 @@ import { createClient } from '@/lib/supabase/server'
 
 export async function GET(
   request: Request,
-  context: { params: Promise<{ id: string }> }
+  { params }: { params: { id: string } }
 ) {
   try {
-    const { id } = await context.params
     const supabase = await createClient()
-
+    
+    // Fetch freelancer with all related data
     const { data, error } = await supabase
       .from('profiles')
       .select(`
         *,
         freelancer_skills (*),
-        freelancer_portfolios (*),
+        freelancer_portfolio (*),
         freelancer_availability (*),
-        freelancer_reviews (
-          *,
-          client:profiles!freelancer_reviews_client_id_fkey (
-            full_name,
-            company_name
-          ),
-          project:projects (
-            title
-          )
+        project_assignments (
+          id,
+          status,
+          completed_at
         )
       `)
-      .eq('id', id)
+      .eq('id', params.id)
       .eq('role', 'service_provider')
+      .eq('onboarding_completed', true)
       .single()
 
     if (error) {
       if (error.code === 'PGRST116') {
         return NextResponse.json(
-          { success: false, error: 'Freelancer not found' },
+          { 
+            success: false, 
+            error: 'Freelancer not found' 
+          },
           { status: 404 }
         )
       }
       throw error
     }
 
-    // Get stats
-    const { data: stats } = await supabase
-      .from('freelancer_stats')
-      .select('*')
-      .eq('id', id)
-      .single()
+    // Calculate additional stats
+    const completedProjects = data.project_assignments?.filter(
+      (assignment: any) => assignment.status === 'completed'
+    ).length || 0
+
+    const freelancerWithStats = {
+      ...data,
+      completed_projects: completedProjects,
+      active_projects: data.project_assignments?.filter(
+        (assignment: any) => assignment.status === 'active'
+      ).length || 0,
+    }
 
     return NextResponse.json({ 
       success: true, 
-      data: {
-        ...data,
-        stats
-      }
+      data: freelancerWithStats
     })
   } catch (error: any) {
     console.error('Freelancer fetch error:', error)
