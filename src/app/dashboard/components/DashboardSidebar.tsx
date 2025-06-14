@@ -48,6 +48,7 @@ export default function DashboardSidebar({ user, profile }: DashboardSidebarProp
 
   const adminLinks = [
     { href: '/dashboard', label: 'Overview', icon: LayoutDashboard },
+    { href: '/dashboard/admin/applications', label: 'Freelancer Applications', icon: UserCheck },
     { href: '/dashboard/projects', label: 'All Projects', icon: FileText },
     { href: '/dashboard/clients', label: 'Clients', icon: Users },
     { href: '/dashboard/freelancers', label: 'Freelancers', icon: UserCheck },
