@@ -1,21 +1,39 @@
+// src/hooks/useAuth.tsx
 'use client'
 
-import { useEffect, useState, createContext, useContext, useCallback } from 'react'
+import { createContext, useContext, useEffect, useState, useCallback } from 'react'
+import { useRouter } from 'next/navigation'
 import { User, Session } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/client'
-import { useRouter } from 'next/navigation'
 import toast from 'react-hot-toast'
 
-interface Profile {
+export interface Profile {
   id: string
   email: string
   full_name: string | null
   company_name: string | null
   phone: string | null
   role: 'client' | 'admin' | 'service_provider'
-  is_verified: boolean
+  onboarding_completed: boolean
+  bio?: string | null
+  hourly_rate?: number | null
+  years_experience?: number
+  portfolio_url?: string | null
+  linkedin_url?: string | null
+  github_url?: string | null
+  availability_status?: string | null
   created_at: string
   updated_at: string
+  is_verified?: boolean
+  verification_date?: string | null
+}
+
+interface SignUpData {
+  email: string
+  password: string
+  fullName: string
+  companyName?: string
+  phone?: string
 }
 
 interface AuthContextType {
@@ -32,14 +50,6 @@ interface AuthContextType {
   updatePassword: (newPassword: string) => Promise<void>
 }
 
-interface SignUpData {
-  email: string
-  password: string
-  fullName: string
-  companyName?: string
-  phone?: string
-}
-
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -47,161 +57,195 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [profile, setProfile] = useState<Profile | null>(null)
   const [session, setSession] = useState<Session | null>(null)
   const [loading, setLoading] = useState(true)
+  const [mounted, setMounted] = useState(false)
+  
   const router = useRouter()
   const supabase = createClient()
 
-  // Create profile for new users
-  const createProfile = useCallback(async (userId: string) => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
-
-      const profileData = {
-        id: userId,
-        email: user.email!,
-        full_name: user.user_metadata.full_name || null,
-        company_name: user.user_metadata.company_name || null,
-        phone: user.user_metadata.phone || null,
-        role: 'client' as const,
-      }
-
-      const { data, error } = await supabase
-        .from('profiles')
-        .upsert(profileData, {
-          onConflict: 'id',
-          ignoreDuplicates: false
-        })
-        .select()
-        .single()
-
-      if (!error && data) {
-        setProfile(data)
-      }
-    } catch (error) {
-      console.error('Error creating profile:', error)
-    }
-  }, [supabase])
-
-  // Fetch user profile
+  // Fetch profile data
   const fetchProfile = useCallback(async (userId: string) => {
     try {
+      console.log('Fetching profile for user:', userId)
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', userId)
         .single()
 
-      if (error) throw error
-      setProfile(data)
+      if (error) {
+        console.error('Error fetching profile:', error)
+        // If profile doesn't exist, create one
+        if (error.code === 'PGRST116') {
+          const { data: newProfile, error: createError } = await supabase
+            .from('profiles')
+            .insert({
+              id: userId,
+              email: user?.email || '',
+              role: 'client',
+              onboarding_completed: false,
+            })
+            .select()
+            .single()
+
+          if (createError) {
+            console.error('Error creating profile:', createError)
+            throw createError
+          }
+          
+          setProfile(newProfile)
+        } else {
+          throw error
+        }
+      } else {
+        console.log('Profile fetched successfully:', data)
+        setProfile(data)
+      }
     } catch (error) {
-      console.error('Error fetching profile:', error)
-      // Create profile if it doesn't exist
-      await createProfile(userId)
+      console.error('Profile fetch error:', error)
+      toast.error('Failed to load profile')
+      // Don't throw here - allow the app to continue with null profile
+      setProfile(null)
     }
-  }, [supabase, createProfile])
+  }, [supabase, user?.email])
 
   // Initialize auth state
   useEffect(() => {
-    let mounted = true
+    let isMounted = true
 
-    async function initializeAuth() {
+    const initializeAuth = async () => {
       try {
+        console.log('Initializing auth...')
         // Get initial session
-        const { data: { session } } = await supabase.auth.getSession()
+        const { data: { session }, error } = await supabase.auth.getSession()
         
-        if (session && mounted) {
+        if (error) {
+          console.error('Error getting session:', error)
+          throw error
+        }
+
+        if (isMounted) {
+          console.log('Session:', session)
           setSession(session)
-          setUser(session.user)
-          await fetchProfile(session.user.id)
+          setUser(session?.user ?? null)
+          
+          // Fetch profile if user exists
+          if (session?.user) {
+            await fetchProfile(session.user.id)
+          }
+          
+          setMounted(true)
+          setLoading(false)
         }
       } catch (error) {
         console.error('Auth initialization error:', error)
-      } finally {
-        if (mounted) {
+        if (isMounted) {
           setLoading(false)
+          setMounted(true)
         }
       }
     }
 
     initializeAuth()
 
-    // Listen for auth changes
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (!mounted) return
+    // Set up auth state listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        console.log('Auth state change:', event, session)
+        
+        if (!isMounted) return
 
-      console.log('Auth event:', event)
-      
-      switch (event) {
-        case 'SIGNED_IN':
-          setSession(session)
-          setUser(session?.user ?? null)
-          if (session?.user) {
-            await fetchProfile(session.user.id)
-          }
-          break
-          
-        case 'SIGNED_OUT':
-          setSession(null)
-          setUser(null)
-          setProfile(null)
-          router.push('/')
-          break
-          
-        case 'TOKEN_REFRESHED':
-          setSession(session)
-          break
-          
-        case 'USER_UPDATED':
-          setUser(session?.user ?? null)
-          if (session?.user) {
-            await fetchProfile(session.user.id)
-          }
-          break
+        switch (event) {
+          case 'INITIAL_SESSION':
+            // Already handled in initializeAuth
+            break
+            
+          case 'SIGNED_IN':
+            setSession(session)
+            setUser(session?.user ?? null)
+            if (session?.user) {
+              await fetchProfile(session.user.id)
+            }
+            break
+            
+          case 'SIGNED_OUT':
+            setSession(null)
+            setUser(null)
+            setProfile(null)
+            router.push('/')
+            break
+            
+          case 'TOKEN_REFRESHED':
+            setSession(session)
+            break
+            
+          case 'USER_UPDATED':
+            setUser(session?.user ?? null)
+            if (session?.user) {
+              await fetchProfile(session.user.id)
+            }
+            break
+        }
       }
-    })
+    )
 
     return () => {
-      mounted = false
+      isMounted = false
       subscription.unsubscribe()
     }
   }, [fetchProfile, router, supabase])
 
   // Auth methods
   const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    })
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      })
 
-    if (error) {
+      if (error) {
+        console.error('Sign in error:', error)
+        throw error
+      }
+    } catch (error) {
+      console.error('Sign in error:', error)
       throw error
     }
   }
 
   const signUp = async (data: SignUpData) => {
-    const { error } = await supabase.auth.signUp({
-      email: data.email,
-      password: data.password,
-      options: {
-        data: {
-          full_name: data.fullName,
-          company_name: data.companyName,
-          phone: data.phone,
+    try {
+      const { error } = await supabase.auth.signUp({
+        email: data.email,
+        password: data.password,
+        options: {
+          data: {
+            full_name: data.fullName,
+            company_name: data.companyName,
+            phone: data.phone,
+          },
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
         },
-        emailRedirectTo: `${window.location.origin}/auth/callback`,
-      },
-    })
+      })
 
-    if (error) {
+      if (error) {
+        console.error('Sign up error:', error)
+        throw error
+      }
+    } catch (error) {
+      console.error('Sign up error:', error)
       throw error
     }
   }
 
   const signOut = async () => {
-    const { error } = await supabase.auth.signOut()
-    if (error) {
+    try {
+      const { error } = await supabase.auth.signOut()
+      if (error) {
+        console.error('Sign out error:', error)
+        throw error
+      }
+    } catch (error) {
+      console.error('Sign out error:', error)
       throw error
     }
   }
@@ -209,19 +253,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const updateProfile = async (data: Partial<Profile>) => {
     if (!user) throw new Error('No user logged in')
 
-    const { error } = await supabase
-      .from('profiles')
-      .update({
-        ...data,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', user.id)
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          ...data,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', user.id)
 
-    if (error) throw error
+      if (error) throw error
 
-    // Refresh profile
-    await fetchProfile(user.id)
-    toast.success('Profile updated successfully')
+      // Refresh profile
+      await fetchProfile(user.id)
+      toast.success('Profile updated successfully')
+    } catch (error) {
+      console.error('Update profile error:', error)
+      throw error
+    }
   }
 
   const refreshProfile = async () => {
@@ -230,26 +279,36 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   const sendPasswordReset = async (email: string) => {
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/auth/reset-password`,
-    })
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/auth/reset-password`,
+      })
 
-    if (error) throw error
+      if (error) throw error
+    } catch (error) {
+      console.error('Password reset error:', error)
+      throw error
+    }
   }
 
   const updatePassword = async (newPassword: string) => {
-    const { error } = await supabase.auth.updateUser({
-      password: newPassword,
-    })
+    try {
+      const { error } = await supabase.auth.updateUser({
+        password: newPassword,
+      })
 
-    if (error) throw error
+      if (error) throw error
+    } catch (error) {
+      console.error('Update password error:', error)
+      throw error
+    }
   }
 
   const value = {
     user,
     profile,
     session,
-    loading,
+    loading: loading || !mounted,
     signIn,
     signUp,
     signOut,
@@ -259,8 +318,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     updatePassword,
   }
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
+  // Don't render children until mounted to prevent hydration issues
+  if (!mounted) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-12 h-12 animate-spin rounded-full border-b-2 border-emerald-600 mx-auto" />
+          <p className="text-gray-600 mt-4">Loading...</p>
+        </div>
+      </div>
+    )
+  }
 
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }
 
 // Hook to use auth context
@@ -284,58 +354,76 @@ export function useRole() {
   }
 }
 
-// Hook for protected routes
-export function useProtectedRoute(allowedRoles?: Array<'client' | 'admin' | 'service_provider'>) {
-  const { user, profile, loading } = useAuth()
-  const router = useRouter()
-  
-  useEffect(() => {
-    if (!loading) {
-      if (!user) {
-        router.push('/login')
-      } else if (allowedRoles && profile && !allowedRoles.includes(profile.role)) {
-        toast.error('You do not have permission to access this page')
-        router.push('/dashboard')
-      }
-    }
-  }, [user, profile, loading, allowedRoles, router])
-  
-  return { loading, authorized: !!user && (!allowedRoles || allowedRoles.includes(profile?.role || 'client')) }
-}
-
 // Hook for session management
 export function useSession() {
-  const { session } = useAuth()
+  const { session, loading } = useAuth()
   const [timeUntilExpiry, setTimeUntilExpiry] = useState<number | null>(null)
-  
+
   useEffect(() => {
-    if (!session) return
-    
-    const checkExpiry = () => {
+    if (!session?.expires_at) {
+      setTimeUntilExpiry(null)
+      return
+    }
+
+    const calculateTimeUntilExpiry = () => {
       const expiryTime = new Date(session.expires_at!).getTime()
       const now = Date.now()
       const timeLeft = expiryTime - now
-      
-      setTimeUntilExpiry(timeLeft)
-      
-      // Warn user when session is about to expire (5 minutes)
-      if (timeLeft < 5 * 60 * 1000 && timeLeft > 0) {
-        toast('Your session will expire soon. Please save your work.', {
-          icon: '⏰',
-          duration: 10000,
-        })
-      }
+      setTimeUntilExpiry(timeLeft > 0 ? timeLeft : 0)
     }
-    
-    checkExpiry()
-    const interval = setInterval(checkExpiry, 60000) // Check every minute
-    
+
+    // Calculate immediately
+    calculateTimeUntilExpiry()
+
+    // Update every minute
+    const interval = setInterval(calculateTimeUntilExpiry, 60000)
+
     return () => clearInterval(interval)
-  }, [session])
-  
+  }, [session?.expires_at])
+
   return {
     session,
-    isExpired: timeUntilExpiry !== null && timeUntilExpiry <= 0,
+    loading,
     timeUntilExpiry,
+    isExpired: timeUntilExpiry !== null && timeUntilExpiry <= 0,
   }
+}
+
+// Hook for protected routes
+export function useProtectedRoute(
+  allowedRoles?: Array<'client' | 'admin' | 'service_provider'>,
+  requireVerified = false
+) {
+  const { user, profile, loading } = useAuth()
+  const router = useRouter()
+  const [isAuthorized, setIsAuthorized] = useState(false)
+
+  useEffect(() => {
+    if (!loading) {
+      // Check if user is authenticated
+      if (!user) {
+        router.push(`/login?redirectTo=${window.location.pathname}`)
+        return
+      }
+
+      // Check if email is verified (if required)
+      if (requireVerified && !user.email_confirmed_at) {
+        router.push('/auth/verify-email')
+        return
+      }
+
+      // Check role-based access
+      if (allowedRoles && profile) {
+        if (!allowedRoles.includes(profile.role)) {
+          router.push('/dashboard')
+          return
+        }
+      }
+
+      // All checks passed
+      setIsAuthorized(true)
+    }
+  }, [user, profile, loading, allowedRoles, requireVerified, router])
+
+  return { isAuthorized, loading }
 }

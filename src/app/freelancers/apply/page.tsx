@@ -1,263 +1,246 @@
 // src/app/freelancers/apply/page.tsx
 'use client'
 
-import React from 'react'
-import { motion } from 'framer-motion'
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { 
-  Shield, 
-  Users, 
-  TrendingUp, 
-  Code, 
-  Palette, 
-  Smartphone, 
-  Globe,
-  CheckCircle,
-  ArrowRight,
-} from 'lucide-react'
+import { motion } from 'framer-motion'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { z } from 'zod'
+import toast from 'react-hot-toast'
+import { Send, ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
 
-export default function FreelancerApplyPage() {
+const applicationSchema = z.object({
+  full_name: z.string().min(2, 'Name must be at least 2 characters'),
+  email: z.string().email('Invalid email address'),
+  phone: z.string().min(8, 'Phone number must be at least 8 digits'),
+  years_experience: z.string().min(1, 'Please select your experience level'),
+  primary_skills: z.string().min(10, 'Please describe your primary skills'),
+  portfolio_url: z.string().url('Invalid URL').optional().or(z.literal('')),
+  why_join: z.string().min(50, 'Please write at least 50 characters'),
+  muslim_owned_experience: z.boolean(),
+})
+
+type ApplicationFormData = z.infer<typeof applicationSchema>
+
+export default function FreelancerApplicationPage() {
   const router = useRouter()
+  const [submitting, setSubmitting] = useState(false)
 
-  const benefits = [
-    {
-      icon: Shield,
-      title: 'Verified Clients',
-      description: 'Work with legitimate Muslim-owned businesses that value quality and professionalism'
-    },
-    {
-      icon: Users,
-      title: 'Community Support',
-      description: 'Join a network of talented professionals supporting each other'
-    },
-    {
-      icon: TrendingUp,
-      title: 'Growth Opportunities',
-      description: 'Access training, resources, and opportunities to expand your skills'
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<ApplicationFormData>({
+    resolver: zodResolver(applicationSchema),
+  })
+
+  const onSubmit = async (data: ApplicationFormData) => {
+    setSubmitting(true)
+    try {
+      const response = await fetch('/api/freelancers/apply', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      })
+
+      const result = await response.json()
+
+      if (result.success) {
+        toast.success('Application submitted successfully!')
+        router.push('/freelancers/application-success')
+      } else {
+        toast.error(result.error || 'Failed to submit application')
+      }
+    } catch (error) {
+      toast.error('Something went wrong. Please try again.')
+      console.log('Error: ', error)
+    } finally {
+      setSubmitting(false)
     }
-  ]
-
-  const requirements = [
-    'Minimum 2 years of professional experience',
-    'Portfolio showcasing your best work',
-    'Strong communication skills in English',
-    'Commitment to quality and deadlines',
-    'Professional references available',
-    'Based in or able to work with Singapore timezone'
-  ]
-
-  const services = [
-    { icon: Globe, label: 'Web Development' },
-    { icon: Palette, label: 'UI/UX Design' },
-    { icon: Smartphone, label: 'Mobile Development' },
-    { icon: Code, label: 'Backend Development' },
-  ]
-
-  const stats = [
-    { value: '500+', label: 'Active Projects' },
-    { value: '$80-150', label: 'Hourly Rates' },
-    { value: '95%', label: 'Client Satisfaction' },
-    { value: '48hrs', label: 'Avg Response Time' }
-  ]
+  }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Navigation */}
-      <nav className="bg-white shadow-sm sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <Link href="/" className="text-2xl font-bold text-emerald-600">
-              TechHalal
-            </Link>
-            <div className="flex items-center space-x-4">
-              <Link href="/" className="text-gray-600 hover:text-gray-900">
-                Back to Home
-              </Link>
-              <Link
-                href="/freelancer"
-                className="bg-emerald-600 text-white px-4 py-2 rounded-lg hover:bg-emerald-700 transition"
-              >
-                Start Application
-              </Link>
-            </div>
-          </div>
-        </div>
-      </nav>
+    <div className="min-h-screen bg-gray-50 py-12">
+      <div className="max-w-2xl mx-auto px-4">
+        <Link
+          href="/"
+          className="inline-flex items-center text-gray-600 hover:text-gray-900 mb-8"
+        >
+          <ArrowLeft className="w-4 h-4 mr-2" />
+          Back to Home
+        </Link>
 
-      {/* Hero Section */}
-      <section className="bg-gradient-to-r from-emerald-600 to-teal-600 text-white py-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-            className="text-center max-w-4xl mx-auto"
-          >
-            <h1 className="text-5xl font-bold mb-6">
-              Join Singapore&apos;s Premier Halal Tech Marketplace
-            </h1>
-            <p className="text-xl mb-8 text-emerald-50">
-              Connect with Muslim-owned businesses seeking top-tier tech talent. 
-              Build meaningful projects while growing your career.
-            </p>
-            <button
-              onClick={() => router.push('/freelancer')}
-              className="bg-white text-emerald-600 px-8 py-4 rounded-lg font-semibold text-lg hover:bg-gray-100 transition transform hover:scale-105 inline-flex items-center"
-            >
-              Apply Now
-              <ArrowRight className="ml-2 w-5 h-5" />
-            </button>
-          </motion.div>
-        </div>
-      </section>
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-white rounded-xl shadow-sm p-8"
+        >
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">
+            Join Our Freelancer Network
+          </h1>
+          <p className="text-gray-600 mb-8">
+            Apply to become a freelancer and help Muslim-owned businesses in Singapore succeed online.
+          </p>
 
-      {/* Stats Section */}
-      <section className="py-16 bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-            {stats.map((stat, index) => (
-              <motion.div
-                key={index}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, delay: index * 0.1 }}
-                className="text-center"
-              >
-                <div className="text-3xl font-bold text-emerald-600">{stat.value}</div>
-                <div className="text-gray-600 mt-1">{stat.label}</div>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      </section>
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+            {/* Personal Information */}
+            <div className="space-y-4">
+              <h2 className="text-xl font-semibold text-gray-900">Personal Information</h2>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Full Name *
+                </label>
+                <input
+                  {...register('full_name')}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                  placeholder="John Doe"
+                />
+                {errors.full_name && (
+                  <p className="mt-1 text-sm text-red-600">{errors.full_name.message}</p>
+                )}
+              </div>
 
-      {/* Benefits Section */}
-      <section className="py-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-3xl font-bold text-center mb-12">Why Join TechHalal?</h2>
-          <div className="grid md:grid-cols-3 gap-8">
-            {benefits.map((benefit, index) => {
-              const Icon = benefit.icon
-              return (
-                <motion.div
-                  key={index}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.6, delay: index * 0.1 }}
-                  className="bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition"
-                >
-                  <Icon className="w-12 h-12 text-emerald-600 mb-4" />
-                  <h3 className="text-xl font-semibold mb-2">{benefit.title}</h3>
-                  <p className="text-gray-600">{benefit.description}</p>
-                </motion.div>
-              )
-            })}
-          </div>
-        </div>
-      </section>
-
-      {/* Services Needed */}
-      <section className="py-16 bg-gray-100">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-3xl font-bold text-center mb-12">Services We Need</h2>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-            {services.map((service, index) => {
-              const Icon = service.icon
-              return (
-                <motion.div
-                  key={index}
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ duration: 0.4, delay: index * 0.1 }}
-                  className="bg-white p-6 rounded-lg text-center hover:shadow-lg transition"
-                >
-                  <Icon className="w-12 h-12 text-emerald-600 mx-auto mb-4" />
-                  <h4 className="font-semibold">{service.label}</h4>
-                </motion.div>
-              )
-            })}
-          </div>
-        </div>
-      </section>
-
-      {/* Requirements */}
-      <section className="py-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid md:grid-cols-2 gap-12 items-center">
-            <div>
-              <h2 className="text-3xl font-bold mb-6">What We&apos;re Looking For</h2>
-              <p className="text-gray-600 mb-8">
-                We maintain high standards to ensure our clients receive the best service. 
-                Our selection process ensures only qualified professionals join our platform.
-              </p>
-              <ul className="space-y-3">
-                {requirements.map((req, index) => (
-                  <motion.li
-                    key={index}
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ duration: 0.4, delay: index * 0.1 }}
-                    className="flex items-start"
-                  >
-                    <CheckCircle className="w-5 h-5 text-emerald-600 mr-3 mt-0.5 flex-shrink-0" />
-                    <span className="text-gray-700">{req}</span>
-                  </motion.li>
-                ))}
-              </ul>
-            </div>
-            <div className="bg-emerald-50 p-8 rounded-lg">
-              <h3 className="text-2xl font-semibold mb-4">Application Process</h3>
-              <div className="space-y-4">
-                <div className="flex items-start">
-                  <div className="bg-emerald-600 text-white w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 mr-3">
-                    1
-                  </div>
-                  <div>
-                    <h4 className="font-semibold">Submit Application</h4>
-                    <p className="text-gray-600 text-sm">Fill out our comprehensive form</p>
-                  </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Email *
+                  </label>
+                  <input
+                    {...register('email')}
+                    type="email"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                    placeholder="john@example.com"
+                  />
+                  {errors.email && (
+                    <p className="mt-1 text-sm text-red-600">{errors.email.message}</p>
+                  )}
                 </div>
-                <div className="flex items-start">
-                  <div className="bg-emerald-600 text-white w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 mr-3">
-                    2
-                  </div>
-                  <div>
-                    <h4 className="font-semibold">Review Process</h4>
-                    <p className="text-gray-600 text-sm">Our team reviews within 2-3 days</p>
-                  </div>
-                </div>
-                <div className="flex items-start">
-                  <div className="bg-emerald-600 text-white w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 mr-3">
-                    3
-                  </div>
-                  <div>
-                    <h4 className="font-semibold">Start Working</h4>
-                    <p className="text-gray-600 text-sm">Get matched with projects</p>
-                  </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Phone *
+                  </label>
+                  <input
+                    {...register('phone')}
+                    type="tel"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                    placeholder="+65 9123 4567"
+                  />
+                  {errors.phone && (
+                    <p className="mt-1 text-sm text-red-600">{errors.phone.message}</p>
+                  )}
                 </div>
               </div>
             </div>
-          </div>
-        </div>
-      </section>
 
-      {/* CTA Section */}
-      <section className="py-16 bg-emerald-600 text-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-3xl font-bold mb-4">Ready to Make an Impact?</h2>
-          <p className="text-xl mb-8 text-emerald-50">
-            Join our selective network of top-tier freelancers serving the Muslim business community
-          </p>
-          <button
-            onClick={() => router.push('/freelancer')}
-            className="bg-white text-emerald-600 px-8 py-4 rounded-lg font-semibold text-lg hover:bg-gray-100 transition transform hover:scale-105 inline-flex items-center"
-          >
-            Start Your Application
-            <ArrowRight className="ml-2 w-5 h-5" />
-          </button>
-        </div>
-      </section>
+            {/* Professional Information */}
+            <div className="space-y-4">
+              <h2 className="text-xl font-semibold text-gray-900">Professional Information</h2>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Years of Experience *
+                </label>
+                <select
+                  {...register('years_experience')}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                >
+                  <option value="">Select experience level</option>
+                  <option value="0-2">0-2 years</option>
+                  <option value="3-5">3-5 years</option>
+                  <option value="6-10">6-10 years</option>
+                  <option value="10+">10+ years</option>
+                </select>
+                {errors.years_experience && (
+                  <p className="mt-1 text-sm text-red-600">{errors.years_experience.message}</p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Primary Skills *
+                </label>
+                <textarea
+                  {...register('primary_skills')}
+                  rows={3}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                  placeholder="e.g., Web Development (React, Next.js), Mobile App Development (Flutter), UI/UX Design"
+                />
+                {errors.primary_skills && (
+                  <p className="mt-1 text-sm text-red-600">{errors.primary_skills.message}</p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Portfolio URL (Optional)
+                </label>
+                <input
+                  {...register('portfolio_url')}
+                  type="url"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                  placeholder="https://yourportfolio.com"
+                />
+                {errors.portfolio_url && (
+                  <p className="mt-1 text-sm text-red-600">{errors.portfolio_url.message}</p>
+                )}
+              </div>
+            </div>
+
+            {/* Motivation */}
+            <div className="space-y-4">
+              <h2 className="text-xl font-semibold text-gray-900">Motivation</h2>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Why do you want to join our platform? *
+                </label>
+                <textarea
+                  {...register('why_join')}
+                  rows={4}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                  placeholder="Tell us about your motivation to work with Muslim-owned businesses..."
+                />
+                {errors.why_join && (
+                  <p className="mt-1 text-sm text-red-600">{errors.why_join.message}</p>
+                )}
+              </div>
+
+              <div className="flex items-start">
+                <input
+                  {...register('muslim_owned_experience')}
+                  type="checkbox"
+                  className="mt-1 w-4 h-4 text-emerald-600 border-gray-300 rounded focus:ring-emerald-500"
+                />
+                <label className="ml-2 text-sm text-gray-700">
+                  I have experience working with Muslim-owned businesses
+                </label>
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              disabled={submitting}
+              className="w-full bg-emerald-600 text-white py-3 rounded-lg font-medium hover:bg-emerald-700 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+            >
+              {submitting ? (
+                <>
+                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2" />
+                  Submitting...
+                </>
+              ) : (
+                <>
+                  <Send className="w-5 h-5 mr-2" />
+                  Submit Application
+                </>
+              )}
+            </button>
+          </form>
+        </motion.div>
+      </div>
     </div>
   )
 }
