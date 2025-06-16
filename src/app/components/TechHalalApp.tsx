@@ -1,12 +1,13 @@
 // src/app/components/TechHalalApp.tsx
 'use client'
 
-import React, { useState, useEffect, Suspense } from 'react'
-import { User } from '@supabase/supabase-js'
+import React, { useState, Suspense } from 'react'
 import dynamic from 'next/dynamic'
 import { Toaster } from 'react-hot-toast'
-import { createClient } from '@/lib/supabase/client'
 import { Service } from '@/types/services'
+
+// Import useAuth hook
+import { useAuth } from '@/hooks/useAuth'
 
 // Layout Components
 import Navigation from './layout/Navigation'
@@ -40,8 +41,9 @@ const ServiceDetailModal = dynamic(
 )
 
 const TechHalalApp: React.FC = () => {
-  const supabase = createClient()
-  const [user, setUser] = useState<User | null>(null)
+  // Use the auth hook instead of managing state separately
+  const { user } = useAuth()
+  
   const [authModalOpen, setAuthModalOpen] = useState(false)
   const [selectedService, setSelectedService] = useState<Service | null>(null)
   const [serviceModalOpen, setServiceModalOpen] = useState(false)
@@ -61,23 +63,6 @@ const TechHalalApp: React.FC = () => {
     handleSubmit, 
     submitting 
   } = useContactForm()
-
-  // Auth state management
-  useEffect(() => {
-    // Check initial auth status
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      setUser(user)
-    })
-
-    // Subscribe to auth changes
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null)
-    })
-
-    return () => subscription.unsubscribe()
-  }, [supabase])
 
   // Service selection handler
   const handleServiceSelect = (service: Service) => {
@@ -129,10 +114,10 @@ const TechHalalApp: React.FC = () => {
       {/* Modals */}
       <AuthErrorBoundary>
         <Suspense>
-        <AuthModal
-          isOpen={authModalOpen}
-          onClose={() => setAuthModalOpen(false)}
-        />
+          <AuthModal
+            isOpen={authModalOpen}
+            onClose={() => setAuthModalOpen(false)}
+          />
         </Suspense>
       </AuthErrorBoundary>
 

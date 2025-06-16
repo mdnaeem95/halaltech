@@ -318,18 +318,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     updatePassword,
   }
 
-  // Don't render children until mounted to prevent hydration issues
-  if (!mounted) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-12 h-12 animate-spin rounded-full border-b-2 border-emerald-600 mx-auto" />
-          <p className="text-gray-600 mt-4">Loading...</p>
-        </div>
-      </div>
-    )
-  }
-
+  // Always render children - let individual pages/components handle loading states
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }
 

@@ -4,9 +4,10 @@ import { createClient } from '@/lib/supabase/server'
 
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await context.params
     const supabase = await createClient()
     
     // Fetch freelancer with all related data
@@ -23,7 +24,7 @@ export async function GET(
           completed_at
         )
       `)
-      .eq('id', params.id)
+      .eq('id', id)
       .eq('role', 'service_provider')
       .eq('onboarding_completed', true)
       .single()

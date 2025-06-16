@@ -9,7 +9,8 @@ import {
   X, 
   Eye, 
   User,
-  ExternalLink
+  ExternalLink,
+  Briefcase
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { formatDistanceToNow } from 'date-fns'
@@ -28,11 +29,16 @@ interface FreelancerApplication {
   github_url?: string
   created_at: string
   onboarding_completed: boolean
+  is_verified?: boolean
   freelancer_skills: Array<{
     skill_name: string
     skill_level: string
     years_experience: number
   }>
+  application_status?: string
+  primary_skills?: string
+  why_join?: string
+  muslim_owned_experience?: boolean
 }
 
 export default function AdminApplicationsPage() {
@@ -51,10 +57,13 @@ export default function AdminApplicationsPage() {
     try {
       const res = await fetch('/api/admin/freelancer-applications')
       const data = await res.json()
+      
+      console.log('Fetched applications:', data)
+      
       if (data.success) {
         setApplications(data.data)
       } else {
-        toast.error('Failed to fetch applications')
+        toast.error('Failed to fetch applications: ' + (data.error || 'Unknown error'))
       }
     } catch (error) {
       console.error('Error fetching applications:', error)
@@ -75,6 +84,7 @@ export default function AdminApplicationsPage() {
       if (data.success) {
         toast.success('Application approved successfully')
         await fetchApplications()
+        setSelectedApplication(null)
       } else {
         toast.error(data.error || 'Failed to approve application')
       }
@@ -99,6 +109,7 @@ export default function AdminApplicationsPage() {
       if (data.success) {
         toast.success('Application rejected')
         await fetchApplications()
+        setSelectedApplication(null)
       } else {
         toast.error(data.error || 'Failed to reject application')
       }
@@ -110,26 +121,33 @@ export default function AdminApplicationsPage() {
     }
   }
 
+  // Check if application is approved based on either onboarding_completed or is_verified
+  const isApplicationApproved = (app: FreelancerApplication) => {
+    return app.onboarding_completed || app.is_verified || false
+  }
+
   const filteredApplications = applications.filter(app => {
     const matchesSearch = 
       app.full_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       app.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      app.primary_skills?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       app.freelancer_skills.some(skill => 
         skill.skill_name.toLowerCase().includes(searchQuery.toLowerCase())
       )
     
+    const isApproved = isApplicationApproved(app)
     const matchesFilter = 
       filterStatus === 'all' ||
-      (filterStatus === 'pending' && !app.onboarding_completed) ||
-      (filterStatus === 'approved' && app.onboarding_completed)
+      (filterStatus === 'pending' && !isApproved) ||
+      (filterStatus === 'approved' && isApproved)
     
     return matchesSearch && matchesFilter
   })
 
   const stats = {
     total: applications.length,
-    pending: applications.filter(app => !app.onboarding_completed).length,
-    approved: applications.filter(app => app.onboarding_completed).length
+    pending: applications.filter(app => !isApplicationApproved(app)).length,
+    approved: applications.filter(app => isApplicationApproved(app)).length
   }
 
   return (
@@ -246,9 +264,6 @@ export default function AdminApplicationsPage() {
                       Experience
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Rate
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Skills
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -271,6 +286,9 @@ export default function AdminApplicationsPage() {
                             {app.full_name || 'Unnamed'}
                           </div>
                           <div className="text-sm text-gray-500">{app.email}</div>
+                          {app.phone && (
+                            <div className="text-sm text-gray-500">{app.phone}</div>
+                          )}
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
@@ -278,25 +296,21 @@ export default function AdminApplicationsPage() {
                           {app.years_experience} years
                         </div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-900">
-                          ${app.hourly_rate}/hour
-                        </div>
-                      </td>
                       <td className="px-6 py-4">
                         <div className="flex flex-wrap gap-1">
-                          {app.freelancer_skills.slice(0, 3).map((skill, idx) => (
-                            <span
-                              key={idx}
-                              className="inline-block px-2 py-1 text-xs bg-gray-100 text-gray-700 rounded"
-                            >
-                              {skill.skill_name}
+                          {app.primary_skills ? (
+                            <span className="inline-block px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded">
+                              {app.primary_skills.substring(0, 50)}...
                             </span>
-                          ))}
-                          {app.freelancer_skills.length > 3 && (
-                            <span className="inline-block px-2 py-1 text-xs text-gray-500">
-                              +{app.freelancer_skills.length - 3} more
-                            </span>
+                          ) : (
+                            app.freelancer_skills.slice(0, 3).map((skill, idx) => (
+                              <span
+                                key={idx}
+                                className="inline-block px-2 py-1 text-xs bg-gray-100 text-gray-700 rounded"
+                              >
+                                {skill.skill_name}
+                              </span>
+                            ))
                           )}
                         </div>
                       </td>
@@ -306,7 +320,7 @@ export default function AdminApplicationsPage() {
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        {app.onboarding_completed ? (
+                        {isApplicationApproved(app) ? (
                           <span className="px-2 py-1 text-xs font-medium bg-green-100 text-green-800 rounded-full">
                             Approved
                           </span>
@@ -325,7 +339,7 @@ export default function AdminApplicationsPage() {
                           >
                             <Eye className="w-5 h-5" />
                           </button>
-                          {!app.onboarding_completed && (
+                          {!isApplicationApproved(app) && (
                             <>
                               <button
                                 onClick={() => handleApprove(app.id)}
@@ -404,6 +418,36 @@ export default function AdminApplicationsPage() {
                     </div>
                   </div>
 
+                  {/* Application Info */}
+                  {(selectedApplication.primary_skills || selectedApplication.why_join) && (
+                    <div>
+                      <h4 className="font-semibold text-gray-900 mb-3">Application Details</h4>
+                      {selectedApplication.primary_skills && (
+                        <div className="mb-4">
+                          <p className="text-sm text-gray-600 mb-2">Primary Skills</p>
+                          <p className="text-gray-700">{selectedApplication.primary_skills}</p>
+                        </div>
+                      )}
+                      {selectedApplication.why_join && (
+                        <div className="mb-4">
+                          <p className="text-sm text-gray-600 mb-2">Why They Want to Join</p>
+                          <p className="text-gray-700">{selectedApplication.why_join}</p>
+                        </div>
+                      )}
+                      {selectedApplication.muslim_owned_experience !== undefined && (
+                        <div className="flex items-center">
+                          <Briefcase className="w-4 h-4 text-gray-400 mr-2" />
+                          <p className="text-sm text-gray-700">
+                            Experience with Muslim-owned businesses: {' '}
+                            <span className="font-medium">
+                              {selectedApplication.muslim_owned_experience ? 'Yes' : 'No'}
+                            </span>
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
                   {/* Professional Info */}
                   <div>
                     <h4 className="font-semibold text-gray-900 mb-3">Professional Information</h4>
@@ -412,36 +456,42 @@ export default function AdminApplicationsPage() {
                         <p className="text-sm text-gray-600">Years of Experience</p>
                         <p className="font-medium">{selectedApplication.years_experience} years</p>
                       </div>
-                      <div>
-                        <p className="text-sm text-gray-600">Hourly Rate</p>
-                        <p className="font-medium">${selectedApplication.hourly_rate}/hour</p>
+                      {selectedApplication.hourly_rate > 0 && (
+                        <div>
+                          <p className="text-sm text-gray-600">Hourly Rate</p>
+                          <p className="font-medium">${selectedApplication.hourly_rate}/hour</p>
+                        </div>
+                      )}
+                    </div>
+                    {selectedApplication.bio && (
+                      <div className="mt-4">
+                        <p className="text-sm text-gray-600 mb-2">Bio</p>
+                        <p className="text-gray-700">{selectedApplication.bio}</p>
                       </div>
-                    </div>
-                    <div className="mt-4">
-                      <p className="text-sm text-gray-600 mb-2">Bio</p>
-                      <p className="text-gray-700">{selectedApplication.bio}</p>
-                    </div>
+                    )}
                   </div>
 
                   {/* Skills */}
-                  <div>
-                    <h4 className="font-semibold text-gray-900 mb-3">Skills</h4>
-                    <div className="space-y-2">
-                      {selectedApplication.freelancer_skills.map((skill, idx) => (
-                        <div key={idx} className="flex items-center justify-between bg-gray-50 p-3 rounded">
-                          <div>
-                            <span className="font-medium">{skill.skill_name}</span>
-                            <span className="ml-2 text-sm text-gray-600">
-                              ({skill.skill_level})
+                  {selectedApplication.freelancer_skills.length > 0 && (
+                    <div>
+                      <h4 className="font-semibold text-gray-900 mb-3">Skills</h4>
+                      <div className="space-y-2">
+                        {selectedApplication.freelancer_skills.map((skill, idx) => (
+                          <div key={idx} className="flex items-center justify-between bg-gray-50 p-3 rounded">
+                            <div>
+                              <span className="font-medium">{skill.skill_name}</span>
+                              <span className="ml-2 text-sm text-gray-600">
+                                ({skill.skill_level})
+                              </span>
+                            </div>
+                            <span className="text-sm text-gray-600">
+                              {skill.years_experience} years
                             </span>
                           </div>
-                          <span className="text-sm text-gray-600">
-                            {skill.years_experience} years
-                          </span>
-                        </div>
-                      ))}
+                        ))}
+                      </div>
                     </div>
-                  </div>
+                  )}
 
                   {/* Links */}
                   <div>
@@ -484,13 +534,12 @@ export default function AdminApplicationsPage() {
                   </div>
 
                   {/* Actions */}
-                  {!selectedApplication.onboarding_completed && (
+                  {!isApplicationApproved(selectedApplication) && (
                     <div className="pt-4 border-t border-gray-200 flex justify-end space-x-3">
                       <button
                         onClick={() => {
                           if (confirm('Are you sure you want to reject this application?')) {
                             handleReject(selectedApplication.id)
-                            setSelectedApplication(null)
                           }
                         }}
                         disabled={actionLoading === selectedApplication.id}
@@ -499,10 +548,7 @@ export default function AdminApplicationsPage() {
                         Reject
                       </button>
                       <button
-                        onClick={() => {
-                          handleApprove(selectedApplication.id)
-                          setSelectedApplication(null)
-                        }}
+                        onClick={() => handleApprove(selectedApplication.id)}
                         disabled={actionLoading === selectedApplication.id}
                         className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:opacity-50"
                       >
