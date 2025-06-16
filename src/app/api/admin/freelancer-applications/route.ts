@@ -75,7 +75,7 @@ export async function GET() {
         
         // Merge application data with profile data
         return {
-          id: app.user_id || app.id,
+          id: app.id,
           email: app.email,
           full_name: app.full_name,
           phone: app.phone,

@@ -47,7 +47,7 @@ export default function AdminApplicationsPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [filterStatus, setFilterStatus] = useState<'all' | 'pending' | 'approved'>('pending')
   const [selectedApplication, setSelectedApplication] = useState<FreelancerApplication | null>(null)
-  const [actionLoading, setActionLoading] = useState<string | null>(null)
+  const [actionLoading, setActionLoading] = useState<{ id: string; action: 'approve' | 'reject' } | null>(null)
 
   useEffect(() => {
     fetchApplications()
@@ -74,12 +74,19 @@ export default function AdminApplicationsPage() {
   }
 
   const handleApprove = async (applicationId: string) => {
-    setActionLoading(applicationId)
+    console.log('Approving application:', applicationId)
+    setActionLoading({ id: applicationId, action: 'approve' })
     try {
       const res = await fetch(`/api/admin/freelancer-applications/${applicationId}/approve`, {
-        method: 'POST'
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        }
       })
+      
+      console.log('Approve response status:', res.status)
       const data = await res.json()
+      console.log('Approve response data:', data)
       
       if (data.success) {
         toast.success('Application approved successfully')
@@ -97,14 +104,18 @@ export default function AdminApplicationsPage() {
   }
 
   const handleReject = async (applicationId: string, reason?: string) => {
-    setActionLoading(applicationId)
+    console.log('Rejecting application:', applicationId)
+    setActionLoading({ id: applicationId, action: 'reject' })
     try {
       const res = await fetch(`/api/admin/freelancer-applications/${applicationId}/reject`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ reason })
       })
+      
+      console.log('Reject response status:', res.status)
       const data = await res.json()
+      console.log('Reject response data:', data)
       
       if (data.success) {
         toast.success('Application rejected')
@@ -342,24 +353,37 @@ export default function AdminApplicationsPage() {
                           {!isApplicationApproved(app) && (
                             <>
                               <button
-                                onClick={() => handleApprove(app.id)}
-                                disabled={actionLoading === app.id}
-                                className="text-green-600 hover:text-green-900 disabled:opacity-50"
+                                onClick={() => {
+                                  console.log('Approve button clicked for:', app.id)
+                                  handleApprove(app.id)
+                                }}
+                                disabled={actionLoading?.id === app.id && actionLoading?.action === 'approve'}
+                                className="text-green-600 hover:text-green-900 disabled:opacity-50 disabled:cursor-not-allowed"
                                 title="Approve"
                               >
-                                <Check className="w-5 h-5" />
+                                {actionLoading?.id === app.id && actionLoading?.action === 'approve' ? (
+                                  <div className="w-5 h-5 animate-spin rounded-full border-b-2 border-green-600" />
+                                ) : (
+                                  <Check className="w-5 h-5" />
+                                )}
                               </button>
                               <button
                                 onClick={() => {
-                                  if (confirm('Are you sure you want to reject this application?')) {
+                                  console.log('Reject button clicked for:', app.id)
+                                  const confirmReject = confirm('Are you sure you want to reject this application?')
+                                  if (confirmReject) {
                                     handleReject(app.id)
                                   }
                                 }}
-                                disabled={actionLoading === app.id}
-                                className="text-red-600 hover:text-red-900 disabled:opacity-50"
+                                disabled={actionLoading?.id === app.id && actionLoading?.action === 'reject'}
+                                className="text-red-600 hover:text-red-900 disabled:opacity-50 disabled:cursor-not-allowed"
                                 title="Reject"
                               >
-                                <X className="w-5 h-5" />
+                                {actionLoading?.id === app.id && actionLoading?.action === 'reject' ? (
+                                  <div className="w-5 h-5 animate-spin rounded-full border-b-2 border-red-600" />
+                                ) : (
+                                  <X className="w-5 h-5" />
+                                )}
                               </button>
                             </>
                           )}
@@ -542,14 +566,14 @@ export default function AdminApplicationsPage() {
                             handleReject(selectedApplication.id)
                           }
                         }}
-                        disabled={actionLoading === selectedApplication.id}
+                        disabled={actionLoading?.id === selectedApplication.id}
                         className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 disabled:opacity-50"
                       >
                         Reject
                       </button>
                       <button
                         onClick={() => handleApprove(selectedApplication.id)}
-                        disabled={actionLoading === selectedApplication.id}
+                        disabled={actionLoading?.id === selectedApplication.id}
                         className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:opacity-50"
                       >
                         Approve Application

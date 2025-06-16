@@ -1,4 +1,5 @@
 /* eslint-disable  @typescript-eslint/no-explicit-any */
+// src/app/api/admin/freelancer-applications/[id]/approve/route.ts
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 
@@ -9,6 +10,8 @@ export async function POST(
   try {
     const { id } = await context.params
     const supabase = await createClient()
+    
+    console.log('Approving application:', id)
     
     // Check if user is admin
     const { data: { user }, error: userError } = await supabase.auth.getUser()
@@ -33,33 +36,71 @@ export async function POST(
       )
     }
 
-    // Update freelancer profile to mark as approved
-    const { error: updateError } = await supabase
-      .from('profiles')
+    // First, get the application details
+    const { data: application, error: appError } = await supabase
+      .from('freelancer_applications')
+      .select('*')
+      .eq('id', id)
+      .single()
+
+    if (appError || !application) {
+      console.error('Application not found:', appError)
+      return NextResponse.json(
+        { success: false, error: 'Application not found' },
+        { status: 404 }
+      )
+    }
+
+    // Update the application status
+    const { error: updateAppError } = await supabase
+      .from('freelancer_applications')
       .update({
-        onboarding_completed: true,
-        is_verified: true,
-        updated_at: new Date().toISOString()
+        status: 'approved',
+        reviewed_by: user.id,
+        reviewed_at: new Date().toISOString()
       })
       .eq('id', id)
-      .eq('role', 'service_provider')
 
-    if (updateError) throw updateError
-
-    // Create a notification for the freelancer (if notifications table exists)
-    try {
-      await supabase
-        .from('notifications')
-        .insert({
-          user_id: id,
-          title: 'Application Approved!',
-          message: 'Congratulations! Your freelancer application has been approved. You can now start accepting projects.',
-          type: 'success',
-          is_read: false
-        })
-    } catch (notifError) {
-      console.log('Notifications table might not exist:', notifError)
+    if (updateAppError) {
+      console.error('Error updating application:', updateAppError)
+      throw updateAppError
     }
+
+    // If there's a user_id, update their profile
+    if (application.user_id) {
+      const { error: profileUpdateError } = await supabase
+        .from('profiles')
+        .update({
+          role: 'service_provider',
+          is_verified: true,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', application.user_id)
+
+      if (profileUpdateError) {
+        console.error('Error updating profile:', profileUpdateError)
+        // Don't throw - application is still approved
+      }
+    }
+
+    // Try to create a notification (if table exists and user exists)
+    if (application.user_id) {
+      try {
+        await supabase
+          .from('notifications')
+          .insert({
+            user_id: application.user_id,
+            title: 'Application Approved!',
+            message: 'Congratulations! Your freelancer application has been approved. You can now complete your profile.',
+            type: 'success',
+            is_read: false
+          })
+      } catch (notifError) {
+        console.log('Could not create notification:', notifError)
+      }
+    }
+
+    // TODO: Send approval email to application.email
 
     return NextResponse.json({ 
       success: true, 
