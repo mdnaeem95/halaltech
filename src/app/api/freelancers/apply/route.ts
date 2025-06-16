@@ -2,6 +2,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { z } from 'zod'
+import { sendFreelancerApplicationEmail } from '@/lib/email/service'
 
 const applicationSchema = z.object({
   full_name: z.string().min(2),
@@ -36,32 +37,15 @@ export async function POST(request: Request) {
           { status: 400 }
         )
       }
+      // If user exists but isn't a freelancer, we'll just add their application
+      // without creating a new auth account
     }
     
-    // Create auth user if doesn't exist
-    let userId = existingUser?.id
-    
-    if (!userId) {
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: validatedData.email,
-        password: Math.random().toString(36).slice(-12), // Temporary password
-        options: {
-          data: {
-            full_name: validatedData.full_name,
-            phone: validatedData.phone,
-          }
-        }
-      })
-      
-      if (authError) throw authError
-      userId = authData.user?.id
-    }
-    
-    // Store application data
-    const { error: applicationError } = await supabase
+    // Store application data first (before creating account)
+    const { data: application, error: applicationError } = await supabase
       .from('freelancer_applications')
       .insert({
-        user_id: userId,
+        user_id: existingUser?.id || null, // Link to existing user if they have an account
         full_name: validatedData.full_name,
         email: validatedData.email,
         phone: validatedData.phone,
@@ -70,24 +54,92 @@ export async function POST(request: Request) {
         portfolio_url: validatedData.portfolio_url || null,
         why_join: validatedData.why_join,
         muslim_owned_experience: validatedData.muslim_owned_experience,
-        status: 'pending',
-        created_at: new Date().toISOString(),
+        status: 'pending'
       })
-    
+      .select()
+      .single()
+
     if (applicationError) throw applicationError
     
-    // Send notification to admin
-    await sendAdminNotification(validatedData)
+    // Only create auth account if user doesn't exist
+    if (!existingUser) {
+      // Generate a secure temporary password
+      const tempPassword = generateSecurePassword()
+      
+      // Create auth user with temporary password
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: validatedData.email,
+        password: tempPassword,
+        options: {
+          data: {
+            full_name: validatedData.full_name,
+            phone: validatedData.phone,
+          },
+          // Don't send the default confirmation email
+          emailRedirectTo: undefined
+        }
+      })
+      
+      if (authError) {
+        // If auth creation fails, delete the application
+        await supabase
+          .from('freelancer_applications')
+          .delete()
+          .eq('id', application.id)
+        
+        throw authError
+      }
+      
+      // Update application with user_id
+      await supabase
+        .from('freelancer_applications')
+        .update({ user_id: authData.user?.id })
+        .eq('id', application.id)
+      
+      // Send password reset email so they can set their own password
+      const { error: resetError } = await supabase.auth.resetPasswordForEmail(
+        validatedData.email,
+        {
+          redirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/auth/reset-password?type=welcome`,
+        }
+      )
+      
+      if (resetError) {
+        console.error('Failed to send password reset email:', resetError)
+        // Don't fail the whole request if email fails
+      }
+    }
     
-    // Send confirmation email to applicant
-    await sendApplicantConfirmation(validatedData.email, validatedData.full_name)
+    // Send application confirmation email
+    try {
+      await sendFreelancerApplicationEmail(
+        validatedData.email,
+        validatedData.full_name,
+        !existingUser // includePasswordSetup = true if new user
+      )
+    } catch (emailError) {
+      console.error('Failed to send confirmation email:', emailError)
+      // Don't fail the request if email fails
+    }
     
-    return NextResponse.json({
+    return NextResponse.json({ 
       success: true,
-      message: 'Application submitted successfully',
+      isNewUser: !existingUser,
+      message: existingUser 
+        ? 'Application submitted successfully!'
+        : 'Application submitted! Check your email to set up your account password.'
     })
+    
   } catch (error: any) {
-    console.error('Error submitting application:', error)
+    console.error('Application error:', error)
+    
+    if (error.code === 'P2002') {
+      return NextResponse.json(
+        { success: false, error: 'An application with this email already exists' },
+        { status: 400 }
+      )
+    }
+    
     return NextResponse.json(
       { success: false, error: error.message || 'Failed to submit application' },
       { status: 500 }
@@ -95,13 +147,22 @@ export async function POST(request: Request) {
   }
 }
 
-// Email notification functions (implement with your email service)
-async function sendAdminNotification(data: any) {
-  // Implement email notification to admin
-  console.log('Sending admin notification for new application:', data.email)
-}
-
-async function sendApplicantConfirmation(email: string, name: string) {
-  // Implement confirmation email to applicant
-  console.log(`Sending confirmation email to: ${name}`, email)
+// Helper function to generate secure temporary password
+function generateSecurePassword(length = 16): string {
+  const charset = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*'
+  let password = ''
+  
+  // Ensure at least one of each required character type
+  password += 'A' // uppercase
+  password += 'a' // lowercase  
+  password += '1' // number
+  password += '!' // special
+  
+  // Fill the rest randomly
+  for (let i = password.length; i < length; i++) {
+    password += charset.charAt(Math.floor(Math.random() * charset.length))
+  }
+  
+  // Shuffle the password
+  return password.split('').sort(() => Math.random() - 0.5).join('')
 }

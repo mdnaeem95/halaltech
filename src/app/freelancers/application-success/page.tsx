@@ -1,259 +1,183 @@
 /* eslint-disable  @typescript-eslint/no-explicit-any */
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { motion } from 'framer-motion'
+import { CheckCircle, Mail, ArrowRight, Clock, Lock } from 'lucide-react'
 import Link from 'next/link'
-import { 
-  CheckCircle, 
-  Clock, 
-  Mail, 
-  ArrowRight,
-  Home,
-  FileText,
-  Users
-} from 'lucide-react'
-import confetti from 'canvas-confetti'
 
 export default function ApplicationSuccessPage() {
+  const searchParams = useSearchParams()
+  const [isNewUser, setIsNewUser] = useState(false)
 
   useEffect(() => {
-    // Trigger confetti animation on mount
-    const duration = 3 * 1000
-    const animationEnd = Date.now() + duration
-    const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 0 }
-
-    function randomInRange(min: number, max: number) {
-      return Math.random() * (max - min) + min
-    }
-
-    const interval: any = setInterval(function() {
-      const timeLeft = animationEnd - Date.now()
-
-      if (timeLeft <= 0) {
-        return clearInterval(interval)
-      }
-
-      const particleCount = 50 * (timeLeft / duration)
-      
-      confetti({
-        ...defaults,
-        particleCount,
-        origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 },
-        colors: ['#10b981', '#34d399', '#6ee7b7', '#a7f3d0']
-      })
-      confetti({
-        ...defaults,
-        particleCount,
-        origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 },
-        colors: ['#10b981', '#34d399', '#6ee7b7', '#a7f3d0']
-      })
-    }, 250)
-
-    return () => clearInterval(interval)
-  }, [])
-
-  const nextSteps = [
-    {
-      icon: Clock,
-      title: 'Application Review',
-      description: 'Our team will review your application within 24-48 hours',
-      color: 'text-blue-600',
-      bgColor: 'bg-blue-50'
-    },
-    {
-      icon: Mail,
-      title: 'Email Notification',
-      description: 'You\'ll receive an email once your application is reviewed',
-      color: 'text-purple-600',
-      bgColor: 'bg-purple-50'
-    },
-    {
-      icon: FileText,
-      title: 'Complete Profile',
-      description: 'If approved, you\'ll be invited to complete your full profile',
-      color: 'text-emerald-600',
-      bgColor: 'bg-emerald-50'
-    }
-  ]
-
-  const faqs = [
-    {
-      question: 'How long does the review process take?',
-      answer: 'We typically review applications within 24-48 hours. During busy periods, it may take up to 3 business days.'
-    },
-    {
-      question: 'What happens after my application is approved?',
-      answer: 'You\'ll receive an email with instructions to complete your freelancer profile, including setting your rates, skills, and availability.'
-    },
-    {
-      question: 'Can I update my application?',
-      answer: 'Once submitted, applications cannot be edited. However, you can provide additional information when completing your profile after approval.'
-    },
-    {
-      question: 'What are the approval criteria?',
-      answer: 'We look for relevant experience, quality portfolio work, and alignment with our mission to serve Muslim-owned businesses in Singapore.'
-    }
-  ]
+    // Check if this is a new user from query params
+    const newUser = searchParams.get('newUser') === 'true'
+    setIsNewUser(newUser)
+  }, [searchParams])
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-emerald-50 to-white">
-      {/* Success Message */}
-      <div className="pt-16 pb-8 px-4">
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+      <div className="max-w-2xl w-full">
         <motion.div
-          initial={{ scale: 0 }}
-          animate={{ scale: 1 }}
-          transition={{ type: "spring", duration: 0.5 }}
-          className="max-w-2xl mx-auto text-center"
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="bg-white rounded-xl shadow-lg p-8"
         >
-          <div className="inline-flex items-center justify-center w-20 h-20 bg-emerald-100 rounded-full mb-6">
-            <CheckCircle className="w-12 h-12 text-emerald-600" />
-          </div>
-          
-          <h1 className="text-4xl font-bold text-gray-900 mb-4">
-            Application Submitted Successfully!
-          </h1>
-          
-          <p className="text-xl text-gray-600 mb-8">
-            Thank you for applying to join our freelancer network. We&apos;re excited to review your application.
-          </p>
-
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8">
-            <p className="text-gray-700">
-              We&apos;ve sent a confirmation email to the address you provided. 
-              Please check your inbox (and spam folder) for next steps.
+          {/* Success Icon */}
+          <div className="text-center mb-8">
+            <motion.div
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              transition={{ type: 'spring', stiffness: 200, damping: 20 }}
+              className="inline-flex items-center justify-center w-20 h-20 bg-emerald-100 rounded-full mb-4"
+            >
+              <CheckCircle className="w-10 h-10 text-emerald-600" />
+            </motion.div>
+            
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">
+              Application Submitted Successfully!
+            </h1>
+            
+            <p className="text-lg text-gray-600">
+              Thank you for applying to join the TechHalal Freelancer Network.
             </p>
+          </div>
+
+          {/* New User Password Setup Alert */}
+          {isNewUser && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
+              className="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-8"
+            >
+              <div className="flex items-start">
+                <Lock className="w-6 h-6 text-blue-600 mr-3 mt-1 flex-shrink-0" />
+                <div>
+                  <h3 className="font-semibold text-blue-900 mb-2">
+                    Action Required: Set Up Your Password
+                  </h3>
+                  <p className="text-blue-800 mb-3">
+                    We&apos;ve created an account for you and sent a password setup link to your email. 
+                    Please check your inbox to complete your account setup.
+                  </p>
+                  <p className="text-sm text-blue-700">
+                    <strong>Can&apos;t find the email?</strong> Check your spam folder or{' '}
+                    <Link href="/auth/forgot-password" className="underline hover:text-blue-900">
+                      request a new password reset link
+                    </Link>.
+                  </p>
+                </div>
+              </div>
+            </motion.div>
+          )}
+
+          {/* What Happens Next */}
+          <div className="space-y-6">
+            <div>
+              <h2 className="text-xl font-semibold text-gray-900 mb-4">
+                What happens next?
+              </h2>
+              
+              <div className="space-y-4">
+                <motion.div
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.3 }}
+                  className="flex items-start"
+                >
+                  <div className="bg-emerald-100 rounded-full p-2 mr-4 flex-shrink-0">
+                    <Mail className="w-5 h-5 text-emerald-600" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-gray-900">Check Your Email</h3>
+                    <p className="text-gray-600 text-sm mt-1">
+                      We&apos;ve sent a confirmation email with your application details
+                      {isNewUser && ' and password setup instructions'}.
+                    </p>
+                  </div>
+                </motion.div>
+
+                <motion.div
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.4 }}
+                  className="flex items-start"
+                >
+                  <div className="bg-emerald-100 rounded-full p-2 mr-4 flex-shrink-0">
+                    <Clock className="w-5 h-5 text-emerald-600" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-gray-900">Application Review</h3>
+                    <p className="text-gray-600 text-sm mt-1">
+                      Our team will review your application within 2-3 business days.
+                    </p>
+                  </div>
+                </motion.div>
+
+                <motion.div
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.5 }}
+                  className="flex items-start"
+                >
+                  <div className="bg-emerald-100 rounded-full p-2 mr-4 flex-shrink-0">
+                    <ArrowRight className="w-5 h-5 text-emerald-600" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-gray-900">Get Started</h3>
+                    <p className="text-gray-600 text-sm mt-1">
+                      Once approved, you&apos;ll be able to complete your profile and start accepting projects.
+                    </p>
+                  </div>
+                </motion.div>
+              </div>
+            </div>
+
+            {/* Tips */}
+            <div className="bg-gray-50 rounded-lg p-6 mt-8">
+              <h3 className="font-semibold text-gray-900 mb-3">
+                💡 While you wait...
+              </h3>
+              <ul className="space-y-2 text-sm text-gray-600">
+                <li>• Prepare your portfolio pieces to showcase your best work</li>
+                <li>• Think about your hourly rates and project preferences</li>
+                <li>• Review our freelancer guidelines and best practices</li>
+                {isNewUser && <li>• Complete your password setup to secure your account</li>}
+              </ul>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex flex-col sm:flex-row gap-4 mt-8">
+              <Link
+                href="/"
+                className="flex-1 bg-gray-100 text-gray-700 py-3 px-6 rounded-lg text-center hover:bg-gray-200 transition font-medium"
+              >
+                Return to Homepage
+              </Link>
+              
+              {isNewUser && (
+                <Link
+                  href="/auth/forgot-password"
+                  className="flex-1 bg-emerald-600 text-white py-3 px-6 rounded-lg text-center hover:bg-emerald-700 transition font-medium"
+                >
+                  Set Up Password
+                </Link>
+              )}
+            </div>
           </div>
         </motion.div>
-      </div>
 
-      {/* Next Steps */}
-      <div className="py-12 px-4">
-        <div className="max-w-4xl mx-auto">
-          <h2 className="text-2xl font-bold text-gray-900 text-center mb-8">
-            What Happens Next?
-          </h2>
-          
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {nextSteps.map((step, index) => (
-              <motion.div
-                key={index}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.1 }}
-                className="bg-white rounded-lg shadow-sm border border-gray-200 p-6"
-              >
-                <div className={`inline-flex items-center justify-center w-12 h-12 ${step.bgColor} rounded-lg mb-4`}>
-                  <step.icon className={`w-6 h-6 ${step.color}`} />
-                </div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                  {step.title}
-                </h3>
-                <p className="text-gray-600">
-                  {step.description}
-                </p>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* FAQs */}
-      <div className="py-12 px-4 bg-gray-50">
-        <div className="max-w-3xl mx-auto">
-          <h2 className="text-2xl font-bold text-gray-900 text-center mb-8">
-            Frequently Asked Questions
-          </h2>
-          
-          <div className="space-y-4">
-            {faqs.map((faq, index) => (
-              <motion.div
-                key={index}
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.5 + index * 0.1 }}
-                className="bg-white rounded-lg shadow-sm border border-gray-200 p-6"
-              >
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                  {faq.question}
-                </h3>
-                <p className="text-gray-600">
-                  {faq.answer}
-                </p>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* CTA Section */}
-      <div className="py-16 px-4">
-        <div className="max-w-4xl mx-auto text-center">
-          <h2 className="text-2xl font-bold text-gray-900 mb-4">
-            While You Wait
-          </h2>
-          <p className="text-gray-600 mb-8">
-            Explore our platform and learn more about how we&apos;re helping Muslim-owned businesses succeed online.
+        {/* Contact Support */}
+        <div className="text-center mt-6 text-sm text-gray-600">
+          <p>
+            Have questions? Contact us at{' '}
+            <a href="mailto:support@techhalal.sg" className="text-emerald-600 hover:text-emerald-700">
+              support@techhalal.sg
+            </a>
           </p>
-          
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link
-              href="/"
-              className="inline-flex items-center justify-center px-6 py-3 bg-emerald-600 text-white rounded-lg font-medium hover:bg-emerald-700 transition"
-            >
-              <Home className="w-5 h-5 mr-2" />
-              Back to Home
-            </Link>
-            
-            <Link
-              href="/about"
-              className="inline-flex items-center justify-center px-6 py-3 bg-white text-gray-700 border border-gray-300 rounded-lg font-medium hover:bg-gray-50 transition"
-            >
-              <Users className="w-5 h-5 mr-2" />
-              Learn About Us
-            </Link>
-          </div>
-        </div>
-      </div>
-
-      {/* Additional Resources */}
-      <div className="py-12 px-4 bg-emerald-50">
-        <div className="max-w-4xl mx-auto">
-          <div className="bg-white rounded-xl shadow-sm border border-emerald-200 p-8">
-            <h3 className="text-xl font-bold text-gray-900 mb-4">
-              Prepare for Success
-            </h3>
-            <p className="text-gray-600 mb-6">
-              While your application is being reviewed, here are some tips to prepare for your freelancing journey:
-            </p>
-            
-            <ul className="space-y-3">
-              <li className="flex items-start">
-                <ArrowRight className="w-5 h-5 text-emerald-600 mr-3 mt-0.5 flex-shrink-0" />
-                <span className="text-gray-700">
-                  Update your portfolio with recent projects, especially those relevant to small businesses
-                </span>
-              </li>
-              <li className="flex items-start">
-                <ArrowRight className="w-5 h-5 text-emerald-600 mr-3 mt-0.5 flex-shrink-0" />
-                <span className="text-gray-700">
-                  Prepare case studies that showcase your problem-solving abilities
-                </span>
-              </li>
-              <li className="flex items-start">
-                <ArrowRight className="w-5 h-5 text-emerald-600 mr-3 mt-0.5 flex-shrink-0" />
-                <span className="text-gray-700">
-                  Think about your ideal project types and pricing strategy
-                </span>
-              </li>
-              <li className="flex items-start">
-                <ArrowRight className="w-5 h-5 text-emerald-600 mr-3 mt-0.5 flex-shrink-0" />
-                <span className="text-gray-700">
-                  Consider how you can best serve the Muslim business community in Singapore
-                </span>
-              </li>
-            </ul>
-          </div>
         </div>
       </div>
     </div>
