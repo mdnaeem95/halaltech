@@ -1,4 +1,3 @@
-// src/hooks/useAuth.tsx
 'use client'
 
 import { createContext, useContext, useEffect, useState, useCallback } from 'react'
@@ -13,7 +12,7 @@ export interface Profile {
   full_name: string | null
   company_name: string | null
   phone: string | null
-  role: 'client' | 'admin' | 'service_provider'
+  role: 'client' | 'admin'
   onboarding_completed: boolean
   bio?: string | null
   hourly_rate?: number | null
@@ -338,7 +337,6 @@ export function useRole() {
   return {
     isAdmin: profile?.role === 'admin',
     isClient: profile?.role === 'client',
-    isServiceProvider: profile?.role === 'service_provider',
     role: profile?.role,
   }
 }
@@ -380,7 +378,7 @@ export function useSession() {
 
 // Hook for protected routes
 export function useProtectedRoute(
-  allowedRoles?: Array<'client' | 'admin' | 'service_provider'>,
+  allowedRoles?: Array<'client' | 'admin'>,
   requireVerified = false
 ) {
   const { user, profile, loading } = useAuth()

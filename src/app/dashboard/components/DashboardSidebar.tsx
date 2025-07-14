@@ -12,12 +12,9 @@ import {
   Users,
   Package,
   BarChart,
-  Briefcase,
-  Clock,
-  DollarSign,
-  Calendar,
   Star,
-  UserCheck
+  UserCheck,
+  Headphones
 } from 'lucide-react'
 
 interface DashboardSidebarProps {
@@ -32,17 +29,7 @@ export default function DashboardSidebar({ user, profile }: DashboardSidebarProp
     { href: '/dashboard', label: 'Overview', icon: LayoutDashboard },
     { href: '/dashboard/projects', label: 'Projects', icon: FileText },
     { href: '/dashboard/invoices', label: 'Invoices', icon: CreditCard },
-    { href: '/dashboard/settings', label: 'Settings', icon: Settings },
-  ]
-
-  const freelancerLinks = [
-    { href: '/dashboard', label: 'Overview', icon: LayoutDashboard },
-    { href: '/dashboard/projects', label: 'My Projects', icon: FileText },
-    { href: '/dashboard/earnings', label: 'Earnings', icon: DollarSign },
-    { href: '/dashboard/time-tracking', label: 'Time Tracking', icon: Clock },
-    { href: '/dashboard/availability', label: 'Availability', icon: Calendar },
-    { href: '/dashboard/portfolio', label: 'Portfolio', icon: Briefcase },
-    { href: '/dashboard/reviews', label: 'Reviews', icon: Star },
+    { href: '/dashboard/support', label: 'Support', icon: Headphones },
     { href: '/dashboard/settings', label: 'Settings', icon: Settings },
   ]
 
@@ -51,7 +38,6 @@ export default function DashboardSidebar({ user, profile }: DashboardSidebarProp
     { href: '/dashboard/admin/applications', label: 'Freelancer Applications', icon: UserCheck },
     { href: '/dashboard/projects', label: 'All Projects', icon: FileText },
     { href: '/dashboard/clients', label: 'Clients', icon: Users },
-    { href: '/dashboard/freelancers', label: 'Freelancers', icon: UserCheck },
     { href: '/dashboard/services', label: 'Services', icon: Package },
     { href: '/dashboard/analytics', label: 'Analytics', icon: BarChart },
     { href: '/dashboard/invoices', label: 'Invoices', icon: CreditCard },
@@ -60,8 +46,6 @@ export default function DashboardSidebar({ user, profile }: DashboardSidebarProp
 
   const links = profile?.role === 'admin' 
     ? adminLinks 
-    : profile?.role === 'service_provider' 
-    ? freelancerLinks 
     : clientLinks
 
   return (
