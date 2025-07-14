@@ -1,4 +1,3 @@
-// src/app/components/layout/Navigation.tsx
 'use client'
 
 import React, { useState } from 'react'
@@ -18,8 +17,6 @@ const Navigation: React.FC<NavigationProps> = ({ user, onAuthClick }) => {
 
   const navLinks = [
     { href: '#services', label: 'Services' },
-    { href: '/marketplace/freelancers', label: 'Find Talent'},
-    { href: '/freelancers/apply', label: 'Become a Freelancer'},
     { href: '#about', label: 'About' },
     { href: '#testimonials', label: 'Testimonials' },
     { href: '#contact', label: 'Contact' },
